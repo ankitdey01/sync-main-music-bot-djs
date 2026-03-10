@@ -186,9 +186,9 @@ See the [LICENSE](LICENSE) file for details.
 
 <div align="center">
 
-[![Invite Bot](https://img.shields.io/badge/➕_Invite_Bot-5865F2?style=for-the-badge&logo=discord&logoColor=white)](#)
-[![Support Server](https://img.shields.io/badge/💬_Support_Server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](#)
-[![Vote on Top.gg](https://img.shields.io/badge/🗳️_Vote_on_Top.gg-FF3366?style=for-the-badge&logo=data:image/svg+xml;base64,...&logoColor=white)](#)
+[![Invite Bot](https://img.shields.io/badge/➕_Invite_Bot-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1050725403276353557&permissions=36988944&scope=bot+applications.commands)
+[![Support Server](https://img.shields.io/badge/💬_Support_Server-5865F2?style=for-the-badge&logo=discord&logoColor=white)]([#](https://discord.gg/UVk7mJTyQX))
+[![Vote on Top.gg](https://img.shields.io/badge/🗳️_Vote_on_Top.gg-FF3366?style=for-the-badge&logo=data:image/svg+xml;base64,...&logoColor=white)](https://top.gg/bot/1050725403276353557/vote)
 
 </div>
 
