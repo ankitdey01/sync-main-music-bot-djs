@@ -12,7 +12,7 @@ export default new SlashCommand({
             embeds: [
                 new EmbedBuilder()
                     .setTitle(`${client.user?.username} Invite`)
-                    .setColor(client.data.color)
+                    .setColor(client.color)
                     .setThumbnail(`${client.user?.displayAvatarURL()}`)
                     .setDescription(
                         `Invite Me to your Server! \n\n**[Click Here](${client.data.links.invite})**`)

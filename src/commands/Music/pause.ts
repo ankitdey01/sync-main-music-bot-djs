@@ -12,7 +12,7 @@ export default new SlashCommand({
         if (await botVC(interaction)) return
         if (await differentVoice(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
         if (player.paused) return reply(interaction, "❌", "The player is already paused", true)
 

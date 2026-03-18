@@ -1,4 +1,4 @@
-import { ModalSubmitInteraction, Events, InteractionType, GuildMember } from "discord.js"
+import { ModalSubmitInteraction, Events, InteractionType, GuildMember, MessageFlags } from "discord.js"
 import { CustomClient, editReply, Event, playSong } from "../../structure/index.js"
 
 export default new Event({
@@ -10,17 +10,17 @@ export default new Event({
 
         if (interaction.customId !== "song-req") return
 
-        await interaction.deferReply({ ephemeral: true })
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
         const query = interaction.fields.getTextInputValue("song-req-name")
 
         if (!interaction.channel) return editReply(interaction, "❌", `An **error** has occured! Please report to us using \`/report\`.`)
 
-            const player = client.player.create({
-                guild: interaction.guild.id,
-                voiceChannel: (interaction.member as GuildMember)?.voice.channel?.id,
-                textChannel: interaction.channel.id,
-                selfDeafen: true
+            const player = await client.kazagumo.createPlayer({
+                guildId: interaction.guild.id,
+                voiceId: (interaction.member as GuildMember)?.voice.channel?.id!,
+                textId: interaction.channel.id,
+                deaf: true
             })
 
         playSong(interaction, client, player, query)

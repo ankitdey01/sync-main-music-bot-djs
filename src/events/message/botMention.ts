@@ -20,7 +20,7 @@ export default new Event({
 
         const embedMsg = new EmbedBuilder()
             .setAuthor({ name: `${client.user?.username}`, iconURL: client.user?.displayAvatarURL() })
-            .setColor(client.data.color)
+            .setColor(client.color)
             .setDescription(`${Intro}${Features}${Last}${Promo}`)
             .setFooter({ text: `${client.user?.username}`, iconURL: client.user?.displayAvatarURL() })
             .setThumbnail(`${client.user?.displayAvatarURL()}`)

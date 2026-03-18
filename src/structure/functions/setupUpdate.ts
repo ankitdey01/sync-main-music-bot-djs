@@ -1,19 +1,29 @@
-import { Player } from "erela.js"
-import { BaseGuildTextChannel, EmbedBuilder } from "discord.js"
-import { CustomClient } from "../classes/index.js"
+import { EmbedBuilder, BaseGuildTextChannel } from "discord.js";
+import { KazagumoPlayer } from "kazagumo";
+import { CustomClient } from "../index.js";
+import { Model } from "mongoose";
+import { MusicChannelDocument } from "../../schemas/musicchannel.js";
 
-export async function musicSetupUpdate(client: CustomClient, player: Player, DB: any, Embed: EmbedBuilder) {
 
-    const data = await DB.findOne({ Guild: player.guild })
-    if (!data) return
+export async function musicSetupUpdate(
+    client: CustomClient,
+    player: KazagumoPlayer,
+    setupDB: Model<MusicChannelDocument>,
+    embed: EmbedBuilder,
+    files?: any[]
+) {
+    const data = await setupDB.findOne<MusicChannelDocument>({ 
+        Guild: player.guildId,
+        Channel: player.textId 
+    }).catch(() => null);
 
-    const Channel = await client.channels.fetch(data.Channel).catch(() => { })
-    if (!Channel) return
+    if (!data) return;
 
-    const msg = await (Channel as BaseGuildTextChannel).messages.fetch(data.Message).catch(() => { })
+    const channel = await client.channels.fetch(data.Channel).catch(() => null) as BaseGuildTextChannel;
+    if (!channel) return;
 
-    if (!msg || !msg?.editable) return
+    const message = await channel.messages.fetch(data.Message).catch(() => null);
+    if (!message || !message.editable) return;
 
-    await msg.edit({ embeds: [Embed] }).catch(err => { })
-
+    await message.edit({ embeds: [embed], files }).catch(() => {});
 }

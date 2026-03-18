@@ -9,25 +9,21 @@
         "start": "tsc && node ."
     },
     "keywords": [],
-    "author": "Ankitzz",
+    "author": "ankitdey01",
     "license": "ISC",
     "dependencies": {
         "@top-gg/sdk": "^3.1.5",
-        "better-erela.js-apple": "^1.0.5",
         "chalk": "^4.1.2",
         "discord-arts": "^0.3.6",
-        "discord.js": "^14.11.0",
-        "erela.js": "^2.4.0",
-        "erela.js-deezer": "^1.0.7",
-        "erela.js-facebook": "^1.0.4",
-        "erela.js-filters": "^1.2.7",
-        "erela.js-spotify": "^1.2.0",
-        "mongoose": "^6.8.0",
-        "parse-ms": "^3.0.0",
+        "discord.js": "^14.25.1",
+        "kazagumo": "^3.4.0",
+        "kazagumo-spotify": "^2.1.1",
+        "mongoose": "^9.1.5",
         "pretty-ms": "^7.0.1",
+        "shoukaku": "^4.2.0",
         "youtube-sr": "^4.3.4"
     },
     "devDependencies": {
-        "typescript": "^4.9.5"
+        "typescript": "^5.3.3"
     }
 }

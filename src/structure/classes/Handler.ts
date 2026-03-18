@@ -1,6 +1,6 @@
 import { ChannelType, Colors, EmbedBuilder, Events, RESTPostAPIApplicationCommandsJSONBody, SlashCommandBuilder } from "discord.js";
 import { getAllFiles } from "../functions/index.js";
-import { Event, SlashCommand, PlayerEvent, BaseApplicationCommand } from "../interfaces/index.js";
+import { Event, SlashCommand, ShoukakuEvent, BaseApplicationCommand } from "../interfaces/index.js";
 import { CustomClient } from "./index.js";
 
 export class Handler {
@@ -54,22 +54,38 @@ export class Handler {
         if (loadedEvents !== 0) this.client.logger.info("System", `Events Loaded : ${this.client.logger.highlight(loadedEvents.toString(), "success")}`);
     }
 
-    async loadErelaEvents(directory: string) {
+    async loadShoukakuEvents(directory: string) {
         const files = getAllFiles(directory);
         if (!files.length) return;
         let loadedEvents = 0;
 
         for await (const file of files) {
-            const { data: event }: PlayerEvent = (await import(file)).default;
+            const { data: event }: ShoukakuEvent = (await import(file)).default;
 
             const execute = (...args: unknown[]) => event?.execute(...args, this.client);
 
-            if (event?.name !== null) this.client.player.on(event?.name, execute);
+            if (event?.name !== null) {
+                // Kazagumo player events
+                const playerEvents = ["playerStart", "playerEnd", "playerEmpty", "playerClosed", "playerUpdate", "playerException", "playerStuck", "playerResumed"];
+                // Shoukaku node events
+                const nodeEvents = ["ready", "error", "close", "disconnect", "debug"];
+                
+                if (playerEvents.includes(event?.name)) {
+                    this.client.kazagumo.on(event?.name as any, execute);
+                } else if (nodeEvents.includes(event?.name)) {
+                    // Node events should be handled by shoukaku, not kazagumo
+                    // For node events, we need to pass the client as the first argument
+                    const nodeExecute = (...args: unknown[]) => event?.execute(this.client, ...args);
+                    this.client.shoukaku.on(event?.name as any, nodeExecute);
+                } else {
+                    throw new TypeError(`Unknown event name: ${event?.name}`);
+                }
+            }
             else throw new TypeError(`Event ${file.split("/").at(-2)}/${file.split("/").at(-1)} has no event name`);
             loadedEvents++;
         }
 
-        if (loadedEvents !== 0) this.client.logger.info("System", `Erela Events Loaded : ${this.client.logger.highlight(loadedEvents.toString(), "success")}`);
+        if (loadedEvents !== 0) this.client.logger.info("System", `Shoukaku Events Loaded : ${this.client.logger.highlight(loadedEvents.toString(), "success")}`);
     }
 
     catchErrors() {

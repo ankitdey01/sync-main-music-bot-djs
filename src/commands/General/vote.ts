@@ -11,7 +11,7 @@ export default new SlashCommand({
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setColor(client.data.color)
+                    .setColor(client.color)
                     .setTitle(`Vote Me`)
                     .setThumbnail(`${client.user?.displayAvatarURL()}`)
                     .setDescription(`Sync Music **top.gg** Vote\n\n**[Click Here](${client.data.topgg.vote})**`)

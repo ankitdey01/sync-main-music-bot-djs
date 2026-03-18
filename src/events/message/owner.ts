@@ -1,4 +1,4 @@
-import { Message, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Events } from "discord.js";
+import { Message, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Events, ChannelType } from "discord.js";
 import { CustomClient, Event } from "../../structure/index.js";
 
 export default new Event({
@@ -28,13 +28,14 @@ export default new Event({
         )
 
         const Embed = new EmbedBuilder()
-            .setColor(client.data.color)
+            .setColor(client.color)
             .setAuthor({ name: message.author.username, iconURL: message.author.displayAvatarURL() })
             .setTimestamp()
             .setThumbnail(`${client.user?.displayAvatarURL()}`)
             .setFooter({ text: "Owner Panel" })
             .setDescription(`**Servers\nLeave Guild\nEval**`)
 
+        if (message.channel.type !== ChannelType.GuildText && message.channel.type !== ChannelType.GuildAnnouncement) return
         return message.channel.send({ embeds: [Embed], components: [settings] })
     }
 })

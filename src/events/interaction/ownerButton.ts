@@ -1,4 +1,4 @@
-import { ButtonInteraction, EmbedBuilder, Events, ActionRowBuilder, TextInputBuilder, TextInputStyle, ModalBuilder, italic } from "discord.js"
+import { ButtonInteraction, EmbedBuilder, Events, ActionRowBuilder, TextInputBuilder, TextInputStyle, ModalBuilder, LabelBuilder, italic } from "discord.js"
 import { CustomClient, Event, paginate, reply } from "../../structure/index.js"
 
 export default new Event({
@@ -30,14 +30,15 @@ export default new Event({
 
                 const guildId = new TextInputBuilder()
                     .setCustomId("owner-leave-modal-guildId")
-                    .setLabel("GUILD ID")
                     .setStyle(TextInputStyle.Short)
                     .setPlaceholder("Enter the Guild ID to leave")
                     .setRequired(true)
 
-                const RowTop = new ActionRowBuilder<TextInputBuilder>().addComponents(guildId)
+                const guildIdLabel = new LabelBuilder()
+                    .setLabel("GUILD ID")
+                    .setTextInputComponent(guildId)
 
-                modal.addComponents(RowTop)
+                modal.addLabelComponents(guildIdLabel)
 
                 await interaction.showModal(modal)
             }
@@ -51,14 +52,15 @@ export default new Event({
 
                 const code = new TextInputBuilder()
                     .setCustomId("owner-eval-modal-code")
-                    .setLabel("CODE")
                     .setStyle(TextInputStyle.Paragraph)
                     .setPlaceholder("Enter the code to eval")
                     .setRequired(true)
 
-                const RowTop = new ActionRowBuilder<TextInputBuilder>().addComponents(code)
+                const codeLabel = new LabelBuilder()
+                    .setLabel("CODE")
+                    .setTextInputComponent(code)
 
-                modal.addComponents(RowTop)
+                modal.addLabelComponents(codeLabel)
 
                 await interaction.showModal(modal)
 

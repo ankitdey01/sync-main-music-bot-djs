@@ -13,18 +13,18 @@ export default new SlashCommand({
         if (await botVC(interaction)) return
         if (await joinable(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
         if (!player.queue.previous) return reply(interaction, "❌", "No previous song was found", true)
 
         await interaction.deferReply()
 
-        let res = await player.search(player.queue.previous.uri as string, interaction.user)
+        let res = await player.search(player.queue.previous[0].uri as string, { requester: interaction.user })
 
-        if (player.state !== "CONNECTED") player.connect()
+        if (player.state !== 1) player.connect()
 
         player.queue.add(res.tracks[0])
-        player.stop()
+        player.skip()
         player.pause(false)
         if (
             !player.playing &&

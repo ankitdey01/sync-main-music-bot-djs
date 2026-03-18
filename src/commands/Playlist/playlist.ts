@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, GuildMember } from "discord.js"
+import { SlashCommandBuilder, EmbedBuilder, GuildMember, MessageFlags } from "discord.js"
 import DB from "../../schemas/playlist"
 import wait from "node:timers/promises"
 import { playSong, paginate as Pagination, memberVoice, joinable, SlashCommand, stageCheck, differentVoice } from "../../structure"
@@ -121,7 +121,7 @@ export default new SlashCommand({
             .setColor("DarkRed")
 
         const succEmbed = new EmbedBuilder()
-            .setColor(client.data.color)
+            .setColor(client.color)
 
         switch (interaction.options.getSubcommand()) {
 
@@ -131,7 +131,7 @@ export default new SlashCommand({
 
                 const Playlist = interaction.options.getString('privacy', true) === 'private' ? true : false
 
-                await interaction.deferReply({ ephemeral: true })
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
                 if (data) { // if he is registered in the db
 
@@ -186,7 +186,7 @@ export default new SlashCommand({
 
             case "delete": { //done
 
-                await interaction.deferReply({ ephemeral: true })
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
                 const playlist = interaction.options.getString('playlist', true).toUpperCase()
 
@@ -222,7 +222,7 @@ export default new SlashCommand({
                         if (list.songs.length === 0) return interaction.reply({
                             embeds: [
                                 errEmbed.setDescription(`\`❌\` | The playlist is empty. Use \`/playlist add\` to add new songs`)
-                            ], ephemeral: true
+                            ], flags: MessageFlags.Ephemeral
                         })
 
                         const Sorted = list.songs
@@ -237,7 +237,7 @@ export default new SlashCommand({
                 }
 
                 interaction.reply({
-                    embeds: [errEmbed.setDescription(`\`❌\` | No playlist found named **${playlist}**`)], ephemeral: true
+                    embeds: [errEmbed.setDescription(`\`❌\` | No playlist found named **${playlist}**`)], flags: MessageFlags.Ephemeral
                 })
 
                 function animate(pages: string[], number: number, playlistName: string) {
@@ -257,7 +257,7 @@ export default new SlashCommand({
 
                         const Embed = new EmbedBuilder()
                             .setTitle(`__${playlistName}__ (${pages.length} / 20 Songs)`)
-                            .setColor(client.data.color)
+                            .setColor(client.color)
                             .setThumbnail(`${interaction.user.displayAvatarURL()}`)
                             .setFooter({ text: `${pages.length} / 20`, iconURL: interaction.guild?.iconURL() as string })
                             .setDescription(`\`\`\`${MappedData}\`\`\``)
@@ -276,7 +276,7 @@ export default new SlashCommand({
             case "list": { // done
 
                 if (!data || data.Playlist.length == 0) return interaction.reply({
-                    embeds: [errEmbed.setDescription(`\`❌\` | You have no playlist`)], ephemeral: true
+                    embeds: [errEmbed.setDescription(`\`❌\` | You have no playlist`)], flags: MessageFlags.Ephemeral
                 })
 
                 await interaction.deferReply()
@@ -308,7 +308,7 @@ export default new SlashCommand({
                 }
 
                 const List = new EmbedBuilder()
-                    .setColor(client.data.color)
+                    .setColor(client.color)
                     .setAuthor({ name: `${interaction.user.username} Playlist(s)`, iconURL: interaction.user.displayAvatarURL() })
                     .setDescription(`${info1}\n\n${info2}\n\n${info3}`)
                     .setThumbnail(interaction.user.displayAvatarURL())
@@ -344,11 +344,14 @@ export default new SlashCommand({
                             embeds: [errEmbed.setDescription(`\`❌\` | The playlist is empty. Use \`/playlist add\` to add new songs`)]
                         })
 
-                        const player = client.player.create({
-                            guild: interaction.guild?.id as string,
-                            voiceChannel: (interaction.member as GuildMember).voice.channel?.id as string,
-                            textChannel: interaction.channel?.id as string,
-                            selfDeafen: true
+                        const voiceChannelId = (interaction.member as GuildMember).voice.channel?.id;
+                        if (!voiceChannelId) return;
+
+                        const player = await client.kazagumo.createPlayer({
+                            guildId: interaction.guild?.id as string,
+                            voiceId: voiceChannelId,
+                            textId: interaction.channel?.id as string,
+                            deaf: true
                         })
 
                         for (const song of list.songs) {
@@ -373,7 +376,7 @@ export default new SlashCommand({
 
             case "add": { //works 
 
-                await interaction.deferReply({ ephemeral: true })
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
                 if (!data || data.Playlist.length == 0) return interaction.editReply({
                     embeds: [errEmbed.setDescription(`\`❌\` | You have no playlist created. Use \`/playlist create\` to create one`)]
@@ -410,7 +413,7 @@ export default new SlashCommand({
 
             case "remove": { //works
 
-                await interaction.deferReply({ ephemeral: true })
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
                 const playlist = interaction.options.getString('playlist', true).toUpperCase()
                 const position = interaction.options.getInteger('position', true)
@@ -446,7 +449,7 @@ export default new SlashCommand({
 
             case "current": {
 
-                await interaction.deferReply({ ephemeral: true })
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
                 if (!data || data.Playlist.length == 0) return interaction.editReply({
                     embeds: [errEmbed.setDescription(`\`❌\` | You have no playlist created. Use \`/playlist create\` to create one`)]
@@ -454,7 +457,7 @@ export default new SlashCommand({
 
                 const playlist = interaction.options.getString('playlist', true).toUpperCase()
 
-                const player = client.player.players.get(interaction.guild?.id as string)
+                const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
 
                 if (!player) return interaction.editReply({
                     embeds: [new EmbedBuilder()

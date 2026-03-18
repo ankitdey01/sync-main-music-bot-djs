@@ -14,13 +14,13 @@ export default new SlashCommand({
     await interaction.deferReply()
 
     const Intro = `**Hey ${interaction.user.username}, it's me Sync Music.\nI offer non-stop playback of your favorite tunes with customizable filters to fit your taste.\nChoose me for all of your music needs.**\n\n`
-    const Features = `**My Command Categories:\n\n${emojis.music} | Music Commands\n${emojis.info} | General Commands\n${emojis.filter} | Filter\n${emojis.playlist} | Playlist\n${emojis.settings} | Others\n\n**`
+    const Features = `**My Command Categories:\n\n🎵 | Music Commands\nℹ️ | General Commands\n📂 | Filter\n🧪 | Playlist\n⚙️ | Others\n\n**`
     const Last = `\`Choose a category from below\``
     const Promo = `\n\n**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
 
     const Embed = new EmbedBuilder()
       .setAuthor({ name: `${client.user?.username}`, iconURL: client.user?.displayAvatarURL() })
-      .setColor(client.data.color)
+      .setColor(client.color)
       .setDescription(`${Intro}${Features}${Last}${Promo}`)
       .setFooter({ text: `${client.user?.username}`, iconURL: client.user?.displayAvatarURL() })
       .setThumbnail(`${client.user?.displayAvatarURL()}`)

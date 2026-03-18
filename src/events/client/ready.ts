@@ -1,19 +1,17 @@
-import { ActivityType, Events } from "discord.js";
-import { CustomClient, Event } from "../../structure/index.js";
+
+
+import { Events, ActivityType } from "discord.js";
+import { Event, CustomClient } from "../../structure/index.js";
 
 export default new Event({
     name: Events.ClientReady,
     once: true,
     execute(client: CustomClient) {
+        client.logger.debug("System", `${client.user?.tag} is now online!`);
         
-        client.player.init(client.user?.id)
-
-        if (!client.user) return client.logger.error("System", `Error Finding : ${client.logger.highlight("Client User", "error")}`);
-        client.logger.info("System", `Successfully Logged in to : ${client.logger.highlight(client.user.username, "success")}`);
-
         client.user?.setActivity({
-            name: "Music",
-            type: ActivityType.Listening
-        })
+            name: "Music | /play",
+            type: ActivityType.Playing
+        });
     }
 });

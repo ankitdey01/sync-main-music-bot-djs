@@ -23,11 +23,14 @@ export default new SlashCommand({
 
         const query = interaction.options.getString("query", true)
 
-        const player = client.player.create({
-            guild: interaction.guild?.id as string,
-            voiceChannel: (interaction.member as GuildMember)?.voice?.channel?.id,
-            textChannel: interaction.channel?.id as string,
-            selfDeafen: true
+        const voiceChannelId = (interaction.member as GuildMember)?.voice?.channel?.id;
+        if (!voiceChannelId) return;
+
+        const player = await client.kazagumo.createPlayer({
+            guildId: interaction.guild?.id as string,
+            voiceId: voiceChannelId,
+            textId: interaction.channel?.id as string,
+            deaf: true
         })
 
         playSong(interaction, client, player, query)

@@ -1,4 +1,4 @@
-import { ModalSubmitInteraction, Events, InteractionType, EmbedBuilder } from "discord.js"
+import { ModalSubmitInteraction, Events, InteractionType, EmbedBuilder, MessageFlags } from "discord.js"
 import { CustomClient, Event } from "../../structure/index.js"
 
 export default new Event({
@@ -10,7 +10,7 @@ export default new Event({
 
         if (!["owner-leave-modal", "owner-eval-modal"].includes(interaction.customId)) return
 
-        await interaction.deferReply({ ephemeral: true })
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
         switch (interaction.customId) {
 
@@ -23,7 +23,7 @@ export default new Event({
                 if (!Guild) return interaction.editReply({ content: "NO GUILD WAS FOUND WITH THAT ID" })
 
                 const Embed = new EmbedBuilder()
-                    .setColor(client.data.color)
+                    .setColor(client.color)
                     .setTitle(`Left ${Guild.name}`)
                     .setDescription(`\`\`\`Successfully left the interaction.guild\nOwner ID: ${Guild.ownerId}\nMember Count: ${Guild.memberCount}\`\`\``)
                     .setThumbnail(Guild.iconURL())
@@ -54,7 +54,7 @@ export default new Event({
                 if (!result) return interaction.editReply("THE CODE CAN'T BE EVALED")
 
                 const Embed = new EmbedBuilder()
-                    .setColor(client.data.color)
+                    .setColor(client.color)
                     .setDescription(`\`\`\`${result.toString()}\`\`\``)
                     .setTitle("__EVALED CODE__")
                     .setFooter({ text: "Eval" })

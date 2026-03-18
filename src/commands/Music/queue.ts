@@ -11,14 +11,17 @@ export default new SlashCommand({
     async execute(interaction, client) {
 
         if (await memberVoice(interaction)) return
-        if (await botVC(interaction)) return
+        if (await botVC(interaction)) return  
         if (await differentVoice(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
         if (!player.queue?.length) return reply(interaction, "❌", "There is nothing in the queue", true)
 
-        await interaction.deferReply()
+        // Defer the reply only if no checks have failed (meaning we haven't replied yet)
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.deferReply()
+        }
 
         const queue = player.queue.map(
             (t, i) => `\`${++i}.\` [\`${t.title}\`](https://google.com/search?q=${encodeURIComponent(t.title)}) | ${t.requester}`
@@ -35,7 +38,7 @@ export default new SlashCommand({
 
         const chunked = util.chunk(queue, 10).map((x) => x.join("\n"))
         const Embed = new EmbedBuilder()
-            .setColor(client.data.color)
+            .setColor(client.color)
             .setAuthor({ name: `${interaction.guild?.name}'s Queue`, iconURL: interaction.guild?.iconURL() as string })
             .setDescription(chunked[0])
             .setTimestamp()

@@ -13,14 +13,14 @@ export default new SlashCommand({
                     name: "Track",
                     value: "track"
                 },
-                    {
-                        name: "Queue",
-                        value: "queue"
-                    },
-                    {
-                        name: "Disable",
-                        value: "off"
-                    })
+                {
+                    name: "Queue",
+                    value: "queue"
+                },
+                {
+                    name: "Disable",
+                    value: "off"
+                })
         ),
     category: "Music",
     voteOnly: true,
@@ -30,46 +30,28 @@ export default new SlashCommand({
         if (await botVC(interaction)) return
         if (await differentVoice(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
 
-        switch (interaction.options.getString("mode", true)) {
+        const mode = interaction.options.getString("mode", true) as "track" | "queue" | "off";
+        
+        const loopMode = mode === "off" ? "none" : mode;
+        
+        if (player.loop === loopMode) return reply(interaction, "❌", 
+            mode === "track" ? "This song is already being looped" :
+            mode === "queue" ? "The queue is already being looped" :
+            "The loop mode is already disabled", true
+        );
 
-            case "track": {
-                if (player.trackRepeat) return reply(interaction, "❌", "This song is already being looped", true)
-                if (player.queueRepeat) return reply(interaction, "❌", "The queue is already being looped", true)
+        await interaction.deferReply();
+        player.setLoop(loopMode);
 
-                await interaction.deferReply()
-                player.setTrackRepeat(true)
+        const messages = {
+            track: "**Looping** the current track",
+            queue: "Looping the queue",
+            off: "The loop mode has been disabled"
+        };
 
-                editReply(interaction, "🔄", "**Looping** the current track")
-            }
-                break;
-
-            case "queue": {
-                if (player.trackRepeat) return reply(interaction, "❌", "This song is already being looped", true)
-                if (player.queueRepeat) return reply(interaction, "❌", "The queue is already being looped", true)
-
-                await interaction.deferReply()
-                player.setQueueRepeat(true)
-
-                editReply(interaction, "🔄", "Looping the queue")
-            }
-                break;
-
-            case "off": {
-                if (!player.trackRepeat && !player.queueRepeat) return reply(
-                    interaction, "❌", "The loop mode is already disabled", true
-                )
-
-                await interaction.deferReply()
-
-                player.setTrackRepeat(false)
-                player.setQueueRepeat(false)
-
-                editReply(interaction, "✅", "The loop mode has been disabled")
-            }
-                break;
-        }
+        editReply(interaction, mode === "off" ? "✅" : "🔄", messages[mode]);
     }
-})
+});

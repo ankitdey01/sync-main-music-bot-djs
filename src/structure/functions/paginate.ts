@@ -37,6 +37,14 @@ export async function paginate(interaction: ValidInteraction, embeds: EmbedBuild
             .setStyle(ButtonStyle.Primary)
     ];
 
+    // Set initial button states
+    if (embeds.length === 1) {
+        buttons[0].setDisabled(true); // First page
+        buttons[1].setDisabled(true); // Previous page  
+        buttons[3].setDisabled(true); // Next page
+        buttons[4].setDisabled(true); // Last page
+    }
+
     const row = new ActionRowBuilder<ButtonBuilder>().setComponents(...buttons);
 
     let currentPage: number = 0;
@@ -59,8 +67,17 @@ export async function paginate(interaction: ValidInteraction, embeds: EmbedBuild
             }
 
             case "pagination-closePage": {
-                currentPage = -1
-                break;
+                buttons[0].setDisabled(true);
+                buttons[1].setDisabled(true);
+                buttons[2].setDisabled(true);
+                buttons[3].setDisabled(true);
+                buttons[4].setDisabled(true);
+                
+                const closedRow = new ActionRowBuilder<ButtonBuilder>().setComponents(buttons);
+                i.deferUpdate();
+                message.edit({ components: [closedRow] });
+                collector.stop();
+                return;
             }
 
             case "pagination-nextPage": {
@@ -74,44 +91,38 @@ export async function paginate(interaction: ValidInteraction, embeds: EmbedBuild
             }
         }
 
-        switch (currentPage) {
-            case 0: {
-                buttons[0].setDisabled(true);
-                buttons[1].setDisabled(true);
-                buttons[3].setDisabled(false);
-                buttons[4].setDisabled(false);
-                break;
-            }
+        // Handle single page case
+        if (embeds.length === 1) {
+            buttons[0].setDisabled(true); // First page
+            buttons[1].setDisabled(true); // Previous page  
+            buttons[3].setDisabled(true); // Next page
+            buttons[4].setDisabled(true); // Last page
+        } else {
+            switch (currentPage) {
+                case 0: {
+                    buttons[0].setDisabled(true);  // First page
+                    buttons[1].setDisabled(true);  // Previous page
+                    buttons[3].setDisabled(false); // Next page
+                    buttons[4].setDisabled(false); // Last page
+                    break;
+                }
 
-            case embeds.length - 1: {
-                buttons[0].setDisabled(false);
-                buttons[1].setDisabled(false);
-                buttons[3].setDisabled(true);
-                buttons[4].setDisabled(true);
-                break;
-            }
+                case embeds.length - 1: {
+                    buttons[0].setDisabled(false); // First page
+                    buttons[1].setDisabled(false); // Previous page
+                    buttons[3].setDisabled(true);  // Next page
+                    buttons[4].setDisabled(true);  // Last page
+                    break;
+                }
 
-            case -1: {
-                buttons[0].setDisabled(true);
-                buttons[1].setDisabled(true);
-                buttons[2].setDisabled(true);
-                buttons[3].setDisabled(true);
-                buttons[4].setDisabled(true);
-                break;
-            }
-
-            case 1: {
-                buttons[0].setDisabled(false);
-                buttons[1].setDisabled(false);
-                break;
-            }
-
-            case embeds.length - 2: {
-                buttons[0].setDisabled(false);
-                buttons[1].setDisabled(false);
-                buttons[3].setDisabled(false);
-                buttons[4].setDisabled(false);
-                break;
+                default: {
+                    // Middle pages - enable all navigation buttons
+                    buttons[0].setDisabled(false); // First page
+                    buttons[1].setDisabled(false); // Previous page
+                    buttons[3].setDisabled(false); // Next page
+                    buttons[4].setDisabled(false); // Last page
+                    break;
+                }
             }
         }
 

@@ -18,7 +18,7 @@ export default new SlashCommand({
         if (await memberVoice(interaction)) return
         if (await differentVoice(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
 
         if (!player.playing || !player.queue.current) return reply(interaction, "❌", "No song was found playing", true)
@@ -28,7 +28,7 @@ export default new SlashCommand({
         const forwardAmount = interaction.options.getInteger("seconds")
         let seektime = Number(player.position) + Number(forwardAmount) * 1000
         if (Number(forwardAmount) <= 0) seektime = Number(player.position)
-        if (Number(seektime) >= (player.queue.current.duration as number)) seektime = player.queue.current.duration as number - 1000
+        if (Number(seektime) >= (player.queue.current.length as number)) seektime = player.queue.current.length as number - 1000
 
         player.seek(Number(seektime))
 

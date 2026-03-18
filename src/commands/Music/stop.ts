@@ -3,6 +3,7 @@ import { SlashCommand, memberVoice, botVC, differentVoice, musicSetupUpdate, rep
 import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton";
 import setupDB from "../../schemas/musicchannel";
 import { buttonDisable } from "../../systems/button";
+import { getBackgroundAttachmentUrl } from "../../utils/imageUtils";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -15,31 +16,31 @@ export default new SlashCommand({
         if (await botVC(interaction)) return
         if (await differentVoice(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
 
         await interaction.deferReply()
 
-        const Channel = await interaction.guild?.channels.fetch(player.textChannel as string) as BaseGuildTextChannel
+        const Channel = await interaction.guild?.channels.fetch(player.textId as string) as BaseGuildTextChannel
         if (!Channel) return reply(interaction, "❌", "Failed to stop the track", true)
 
-        const data = await buttonDB.find<TempButtonSchema>({ Guild: player.guild, Channel: player.textChannel })
+        const data = await buttonDB.find<TempButtonSchema>({ Guild: player.guildId, Channel: player.textId })
 
         for (let i = 0; i < data.length; i++) {
             const msg = await Channel.messages.fetch(data[i].MessageID)
 
             if (msg && msg.editable) await msg.edit({ components: [buttonDisable] })
 
-            await data[i].delete()
+            await data[i].deleteOne()
         }
 
-        player.disconnect()
+        if(player.state == 1) player.disconnect()
         player.destroy()
 
         const setupUpdateEmbed = new EmbedBuilder()
-            .setColor(client.data.color)
+            .setColor(client.color)
             .setTitle(`No song playing currently`)
-            .setImage(client.data.links.background)
+            .setImage(getBackgroundAttachmentUrl())
             .setDescription(
                 `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
             )

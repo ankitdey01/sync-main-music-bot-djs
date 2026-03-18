@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, BaseGuildTextChannel } from "discord.js"
+import { SlashCommandBuilder, EmbedBuilder, BaseGuildTextChannel, MessageFlags } from "discord.js"
 import { editReply, log, SlashCommand } from "../../structure/index.js"
 
 export default new SlashCommand({
@@ -13,11 +13,11 @@ export default new SlashCommand({
     category: "General",
     async execute(interaction, client) {
 
-        await interaction.deferReply({ ephemeral: true })
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral })
         editReply(interaction, "✅", `Thanks for reporting! The report is now submitted and will review shortly.`)
 
         const Embed = new EmbedBuilder()
-            .setColor(client.data.color)
+            .setColor(client.color)
             .setTitle(`Reported by ${interaction.user.username}`)
             .addFields(
                 { name: `Guild`, value: `${interaction.guild?.name} (${interaction.guild?.id})` },

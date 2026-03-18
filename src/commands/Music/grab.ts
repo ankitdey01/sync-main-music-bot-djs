@@ -1,11 +1,11 @@
-import { EmbedBuilder, GuildMember, SlashCommandBuilder } from "discord.js"
-import { SlashCommand, botVC, memberVoice, differentVoice, msToTimestamp, reply, editReply } from "../../structure"
-import { Track } from "erela.js"
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { SlashCommand, memberVoice, botVC, differentVoice, msToTimestamp, reply } from "../../structure";
+import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
         .setName('grab')
-        .setDescription('Sends the current playing song to your DM'),
+        .setDescription('Get the current playing song info in your DMs'),
     category: "Music",
     async execute(interaction, client) {
 
@@ -13,36 +13,34 @@ export default new SlashCommand({
         if (await memberVoice(interaction)) return
         if (await differentVoice(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
-        if (!(player.playing || player.paused || player.queue.current)) return interaction.reply({
-            embeds: [new EmbedBuilder()
-                .setColor("DarkRed")
-                .setDescription("No song was found playing")
-            ], ephemeral: true
-        })
+        if (!player.queue.current) return reply(interaction, "❌", "No song was found playing", true)
 
-        await interaction.deferReply({ ephemeral: true })
-
-        const track = player.queue.current as Track
+        const track = player.queue.current
         const link = `https://www.google.com/search?q=${encodeURIComponent(track.title)}`
 
         const Embed = new EmbedBuilder()
-            .setColor(client.data.color)
-            .setAuthor({ name: "SAVED SONG", iconURL: (track as any).requester.displayAvatarURL() as string, url: client.data.links.support })
+            .setColor(client.color)
+            .setAuthor({ 
+                name: "Grabbed your current song | Sync Music", 
+                iconURL: (track.requester as any)?.displayAvatarURL?.() || client.user?.displayAvatarURL() 
+            })
             .setDescription(`[\`\`${track.title}\`\`](${link})`)
             .addFields(
+                { name: 'Requested by', value: `<@${(track.requester as any)?.id || 'Unknown'}>`, inline: true },
                 { name: 'Song by', value: `\`${track.author}\``, inline: true },
-                { name: 'Duration', value: `\`❯ ${msToTimestamp(track.duration)}\``, inline: true },
+                { name: 'Duration', value: `\`❯ ${msToTimestamp(track.length as number)}\``, inline: true },
             )
-            .setImage(`${track.displayThumbnail("maxresdefault") || client.data.links.background}`)
-            .setFooter({ text: `${interaction.guild?.name}`, iconURL: interaction.guild?.iconURL() as string })
-            .setTimestamp()
+            .setImage(track.thumbnail || getBackgroundAttachmentUrl())
 
-        await (interaction.member as GuildMember).send({ embeds: [Embed] }).catch(() => {
-            return editReply(interaction, "❌", "Unable to send the song. Check if you have your DMs open")
-        })
+        const backgroundAttachment = track.thumbnail ? null : getBackgroundAttachment();
 
-        return editReply(interaction, "✅", "The Song has been sent in your DMs!")
+        try {
+            await interaction.user.send({ embeds: [Embed], files: track.thumbnail ? [] : (backgroundAttachment ? [backgroundAttachment] : []) })
+            return reply(interaction, "✅", "Grabbed current song. Check your DMs!")
+        } catch {
+            return reply(interaction, "❌", "I couldn't send you a DM. Please check your privacy settings.", true)
+        }
     }
-})
+});

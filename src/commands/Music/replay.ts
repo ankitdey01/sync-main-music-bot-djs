@@ -1,4 +1,4 @@
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import { SlashCommand, memberVoice, botVC, differentVoice, joinable, stageCheck, reply, editReply } from "../../structure";
 
 export default new SlashCommand({
@@ -14,7 +14,7 @@ export default new SlashCommand({
         if (await stageCheck(interaction)) return
         if (await joinable(interaction)) return
 
-        const player = client.player.players.get(interaction.guild?.id as string)
+        const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
         if (!player) return reply(interaction, "❌", "No song player was found", true)
         if (!player.playing || !player.paused) return reply(interaction, "❌", "No song was found playing", true)
 
