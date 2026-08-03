@@ -127,6 +127,11 @@ export class Handler {
                 }).catch(() => { });
             })
             .on("unhandledRejection", async (reason: Error) => {
+                // Filter out the known ES module exports error from dependencies
+                if (reason.message?.includes("exports is not defined in ES module scope")) {
+                    return;
+                }
+                
                 this.client.logger.error("System", `Unhandled Rejection/Catch : ${reason}`);
                 const channel = await this.client.channels.fetch(logsChannelId).catch(() => { });
                 if (!channel || channel.type !== ChannelType.GuildText) return;

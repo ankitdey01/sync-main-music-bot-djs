@@ -1,6 +1,11 @@
 import { readFileSync, existsSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 import { AttachmentBuilder } from "discord.js";
+import { fileURLToPath } from "url";
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export function getBackgroundAttachment(): AttachmentBuilder {
     // Try multiple possible paths for the background image
