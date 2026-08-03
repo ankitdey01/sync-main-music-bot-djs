@@ -1,5 +1,5 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { SlashCommand, memberVoice, botVC, differentVoice, reply } from "../../structure";
+import { SlashCommand, memberVoice, botVC, differentVoice, reply } from "../../structure/index.js";
 
 export default new SlashCommand({
 

@@ -1,6 +1,6 @@
 import { Message, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, Events } from "discord.js";
 import fs from "fs";
-import emojis from "../../systems/emojis";
+import emojis from "../../systems/emojis.js";
 import { CustomClient, Event } from "../../structure/index.js";
 
 export default new Event({

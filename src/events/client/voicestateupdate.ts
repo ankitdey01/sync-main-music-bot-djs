@@ -1,8 +1,8 @@
 import { Events, GuildMember, VoiceState } from "discord.js";
 import { CustomClient, Event } from "../../structure/index.js";
 import { BaseGuildTextChannel, EmbedBuilder } from "discord.js";
-import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton";
-import { buttonDisable } from "../../systems/button";
+import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton.js";
+import { buttonDisable } from "../../systems/button.js";
 
 export default new Event({
     name: Events.VoiceStateUpdate,

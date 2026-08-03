@@ -6,9 +6,9 @@ import {
   differentVoice,
   msToTimestamp,
   reply,
-} from "../../structure";
+} from "../../structure/index.js";
 import { KazagumoTrack } from "kazagumo";
-import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils";
+import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
   data: new SlashCommandBuilder()

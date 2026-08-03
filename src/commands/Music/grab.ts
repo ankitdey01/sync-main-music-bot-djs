@@ -1,6 +1,6 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { SlashCommand, memberVoice, botVC, differentVoice, msToTimestamp, reply } from "../../structure";
-import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils";
+import { SlashCommand, memberVoice, botVC, differentVoice, msToTimestamp, reply } from "../../structure/index.js";
+import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()

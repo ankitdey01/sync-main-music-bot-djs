@@ -1,5 +1,5 @@
 import { EmbedBuilder, WebhookClient, BaseGuildTextChannel } from "discord.js"
-import { CustomClient } from "../classes"
+import { CustomClient } from "../classes/index.js"
 
 export async function log(client: CustomClient, embed: EmbedBuilder, address: string) {
 

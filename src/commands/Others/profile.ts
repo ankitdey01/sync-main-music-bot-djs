@@ -1,5 +1,5 @@
 import { EmbedBuilder, AttachmentBuilder, SlashCommandBuilder } from "discord.js";
-import db, { PlayedSchema } from "../../schemas/played";
+import db, { PlayedSchema } from "../../schemas/played.js";
 import { profileImage } from "discord-arts";
 import pms from "pretty-ms";
 import { SlashCommand } from "../../structure/index.js";

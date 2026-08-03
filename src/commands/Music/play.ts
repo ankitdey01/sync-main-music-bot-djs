@@ -1,5 +1,5 @@
 import { GuildMember, SlashCommandBuilder } from "discord.js"
-import { SlashCommand, playSong, memberVoice, joinable, differentVoice, stageCheck, reply, editReply } from "../../structure"
+import { SlashCommand, playSong, memberVoice, joinable, differentVoice, stageCheck, reply, editReply } from "../../structure/index.js"
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()

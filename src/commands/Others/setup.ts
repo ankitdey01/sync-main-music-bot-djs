@@ -1,7 +1,7 @@
 import { CustomClient, SlashCommand, reply, editReply } from "../../structure/index.js"
 import { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits, Guild, ChatInputCommandInteraction, GuildChannel, CategoryChannel, BaseGuildTextChannel, OverwriteType } from "discord.js"
-import DB, { MusicChannelDocument } from "../../schemas/musicchannel"
-import { panelbutton } from "../../systems/button"
+import DB, { MusicChannelDocument } from "../../schemas/musicchannel.js"
+import { panelbutton } from "../../systems/button.js"
 import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils.js"
 
 export default new SlashCommand({

@@ -6,4 +6,4 @@ export * from "./check.js";
 export * from "./discordlog.js";
 export * from "./setupUpdate.js";
 export * from "./mstotimestamp.js";
-export * from "./playsong"
+export * from "./playsong.js"

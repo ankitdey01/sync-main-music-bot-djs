@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import { SlashCommand, botVC, memberVoice, differentVoice, reply, editReply } from "../../structure";
+import { SlashCommand, botVC, memberVoice, differentVoice, reply, editReply } from "../../structure/index.js";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()

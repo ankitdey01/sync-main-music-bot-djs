@@ -1,7 +1,7 @@
 import { SlashCommand } from "../../structure/index.js";
 import { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, SlashCommandBuilder } from "discord.js";
 import fs from "fs";
-import emojis from "../../systems/emojis";
+import emojis from "../../systems/emojis.js";
 
 export default new SlashCommand({
   data: new SlashCommandBuilder()

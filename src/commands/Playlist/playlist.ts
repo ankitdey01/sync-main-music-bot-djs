@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, GuildMember, MessageFlags } from "discord.js"
-import DB from "../../schemas/playlist"
+import DB from "../../schemas/playlist.js"
 import wait from "node:timers/promises"
-import { playSong, paginate as Pagination, memberVoice, joinable, SlashCommand, stageCheck, differentVoice } from "../../structure"
+import { playSong, paginate as Pagination, memberVoice, joinable, SlashCommand, stageCheck, differentVoice } from "../../structure/index.js"
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()

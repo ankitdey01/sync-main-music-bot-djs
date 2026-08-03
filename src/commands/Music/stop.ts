@@ -1,9 +1,9 @@
 import { BaseGuildTextChannel, EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { SlashCommand, memberVoice, botVC, differentVoice, musicSetupUpdate, reply, editReply } from "../../structure";
-import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton";
-import setupDB from "../../schemas/musicchannel";
-import { buttonDisable } from "../../systems/button";
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils";
+import { SlashCommand, memberVoice, botVC, differentVoice, musicSetupUpdate, reply, editReply } from "../../structure/index.js";
+import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton.js";
+import setupDB from "../../schemas/musicchannel.js";
+import { buttonDisable } from "../../systems/button.js";
+import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
