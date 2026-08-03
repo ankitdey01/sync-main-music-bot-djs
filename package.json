@@ -3,6 +3,7 @@
     "version": "1.0.11",
     "description": "Sync Music",
     "main": "./dist/index.js",
+    "type": "module",
     "scripts": {
         "lint": "eslint . --ext .ts",
         "fix": "eslint . --ext .ts --fix",
@@ -16,6 +17,7 @@
         "chalk": "^4.1.2",
         "discord-arts": "^0.3.6",
         "discord.js": "^14.25.1",
+        "dotenv": "^17.4.2",
         "kazagumo": "^3.4.0",
         "kazagumo-spotify": "^2.1.1",
         "mongoose": "^9.1.5",
