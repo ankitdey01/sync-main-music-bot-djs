@@ -1,8 +1,6 @@
-import { BaseGuildTextChannel, EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { SlashCommand, memberVoice, botVC, differentVoice, musicSetupUpdate, reply, editReply } from "../../structure/index.js";
-import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton.js";
-import setupDB from "../../schemas/musicchannel.js";
-import { buttonDisable } from "../../systems/button.js";
+import { clearChannelButtons } from "../../systems/button.js";
 import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
@@ -21,20 +19,9 @@ export default new SlashCommand({
 
         await interaction.deferReply()
 
-        const Channel = await interaction.guild?.channels.fetch(player.textId as string) as BaseGuildTextChannel
-        if (!Channel) return reply(interaction, "❌", "Failed to stop the track", true)
+        await clearChannelButtons(client, player.guildId, player.textId as string)
 
-        const data = await buttonDB.find<TempButtonSchema>({ Guild: player.guildId, Channel: player.textId })
-
-        for (let i = 0; i < data.length; i++) {
-            const msg = await Channel.messages.fetch(data[i].MessageID)
-
-            if (msg && msg.editable) await msg.edit({ components: [buttonDisable] })
-
-            await data[i].deleteOne()
-        }
-
-        if(player.state == 1) player.disconnect()
+        if (player.state == 1) player.disconnect()
         player.destroy()
 
         const setupUpdateEmbed = new EmbedBuilder()
@@ -44,8 +31,8 @@ export default new SlashCommand({
             .setDescription(
                 `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
             )
-        await musicSetupUpdate(client, player, setupDB, setupUpdateEmbed)
+        await musicSetupUpdate(client, player, setupUpdateEmbed)
 
-        return editReply(interaction, "⏹", "**Stopped** the player")
+        return editReply(interaction, "⏹", "Stopped the player")
     }
 })

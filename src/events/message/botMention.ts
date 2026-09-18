@@ -1,4 +1,4 @@
-import { Message, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, Events } from "discord.js";
+import { Message, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, Events, ButtonBuilder, ButtonStyle } from "discord.js";
 import fs from "fs";
 import emojis from "../../systems/emojis.js";
 import { CustomClient, Event } from "../../structure/index.js";
@@ -13,6 +13,42 @@ export default new Event({
         if (message.content.includes("@here") || message.content.includes("@everyone")) return
         if (!message.content.includes(client.user?.id)) return
 
+        // Check if developer is requesting owner panel
+        if (message.content.toLowerCase().includes("ownerpanel") && client.data.developers.includes(message.author.id)) {
+            const settings = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("owner-servers")
+                    .setLabel("Servers")
+                    .setStyle(ButtonStyle.Primary),
+
+                new ButtonBuilder()
+                    .setCustomId("owner-leave")
+                    .setLabel("Leave Guild")
+                    .setStyle(ButtonStyle.Primary),
+
+                new ButtonBuilder()
+                    .setCustomId("owner-eval")
+                    .setLabel("Eval")
+                    .setStyle(ButtonStyle.Primary),
+
+                new ButtonBuilder()
+                    .setCustomId("owner-announce")
+                    .setLabel("Announce")
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+            const ownerEmbed = new EmbedBuilder()
+                .setColor(client.color)
+                .setAuthor({ name: message.author.username, iconURL: message.author.displayAvatarURL() })
+                .setTimestamp()
+                .setThumbnail(`${client.user?.displayAvatarURL()}`)
+                .setFooter({ text: "Owner Panel" })
+                .setDescription(`**Servers\nLeave Guild\nEval\nAnnounce**`);
+
+            return message.reply({ embeds: [ownerEmbed], components: [settings] });
+        }
+
+        // Regular bot mention - show help menu
         const Intro = `**Hey ${message.author.username}, it's me Sync Music.\nI offer non-stop playback of your favorite tunes with customizable filters to fit your taste.\nChoose me for all of your music needs.**\n\n`
         const Features = `**My Command Categories:\n\n${emojis.music} | Music Commands\n${emojis.info} | General Commands\n${emojis.filter} | Filter\n${emojis.playlist} | Playlist\n${emojis.settings} | Others\n\n**`
         const Last = `\`Choose a category from below\``

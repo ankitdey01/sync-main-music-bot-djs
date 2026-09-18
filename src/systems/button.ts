@@ -1,4 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import type { CustomClient } from "../structure/index.js";
+import buttonDB, { TempButtonSchema } from "../schemas/tempbutton.js";
 import emoji from "./emojis.js";
 
 const buttonDisable = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -88,5 +90,25 @@ const panelbutton = new ActionRowBuilder<ButtonBuilder>().addComponents(
         .setStyle(ButtonStyle.Secondary),
 
 )
+
+/**
+ * Disable the buttons on a channel's active NOW PLAYING message(s) and remove
+ * their tracking documents. Safe to call when there is nothing to clean.
+ */
+export async function clearChannelButtons(client: CustomClient, guildId: string, textId: string): Promise<void> {
+    const data = await buttonDB.find<TempButtonSchema>({ Guild: guildId, Channel: textId }).catch(() => []);
+    if (!data.length) return;
+
+    const channel = await client.channels.fetch(textId).catch(() => null);
+    if (channel && channel.isTextBased()) {
+        for (const doc of data) {
+            const msg = await channel.messages.fetch(doc.MessageID).catch(() => null);
+            if (msg && msg.editable) await msg.edit({ components: [buttonDisable] }).catch(() => { });
+        }
+    }
+
+    // Remove the tracking docs even when the channel itself is gone
+    await buttonDB.deleteMany({ Guild: guildId, Channel: textId }).catch(() => { });
+}
 
 export { buttonDisable, buttonEnable, panelbutton }

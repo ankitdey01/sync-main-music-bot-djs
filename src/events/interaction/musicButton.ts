@@ -2,10 +2,9 @@ import { BaseGuildTextChannel, ButtonInteraction, EmbedBuilder, Events } from "d
 import { Event, CustomClient, memberVoice, botVC, differentVoice, editReply, reply } from "../../structure/index.js"
 import wait from "node:timers/promises"
 import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton.js"
-import setupDB from "../../schemas/musicchannel.js"
 import { musicSetupUpdate } from "../../structure/index.js"
-import { buttonDisable } from "../../systems/button.js"
-import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils.js"
+import { clearChannelButtons } from "../../systems/button.js"
+import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js"
 
 export default new Event({
     name: Events.InteractionCreate,
@@ -100,14 +99,9 @@ export default new Event({
                 await wait.setTimeout(1000)
                 interaction.deleteReply()
 
-                const Channel = await client.channels.fetch(player.textId).catch(() => { })
-                if(player.state == 1) player.disconnect()
+                if (player.state == 1) player.disconnect()
                 player.destroy()
-                for (let i = 0; i < (data as TempButtonSchema[]).length; i++) {
-                    const msg = await (Channel as BaseGuildTextChannel).messages.fetch((data as TempButtonSchema[])[i].MessageID).catch(() => { })
-                    if (msg && msg.editable) await msg.edit({ components: [buttonDisable] })
-                    await (data as TempButtonSchema[])[i].deleteOne()
-                }
+                await clearChannelButtons(client, interaction.guild?.id as string, player.textId as string)
 
                 const setupUpdateEmbed = new EmbedBuilder()
                     .setColor(client.color)
@@ -117,7 +111,7 @@ export default new Event({
                         `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
                     )
 
-                await musicSetupUpdate(client, player, setupDB, setupUpdateEmbed, (getBackgroundAttachment() ? [getBackgroundAttachment()] : []))
+                await musicSetupUpdate(client, player, setupUpdateEmbed)
             }
                 break;
         }

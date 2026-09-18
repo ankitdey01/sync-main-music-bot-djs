@@ -1,6 +1,6 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { SlashCommand, memberVoice, botVC, differentVoice, msToTimestamp, reply } from "../../structure/index.js";
-import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
+import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -34,10 +34,8 @@ export default new SlashCommand({
             )
             .setImage(track.thumbnail || getBackgroundAttachmentUrl())
 
-        const backgroundAttachment = track.thumbnail ? null : getBackgroundAttachment();
-
         try {
-            await interaction.user.send({ embeds: [Embed], files: track.thumbnail ? [] : (backgroundAttachment ? [backgroundAttachment] : []) })
+            await interaction.user.send({ embeds: [Embed] })
             return reply(interaction, "✅", "Grabbed current song. Check your DMs!")
         } catch {
             return reply(interaction, "❌", "I couldn't send you a DM. Please check your privacy settings.", true)

@@ -1,8 +1,8 @@
-import { CustomClient, SlashCommand, reply, editReply } from "../../structure/index.js"
+import { CustomClient, SlashCommand, reply, editReply, invalidateMusicChannelSetup } from "../../structure/index.js"
 import { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits, Guild, ChatInputCommandInteraction, GuildChannel, CategoryChannel, BaseGuildTextChannel, OverwriteType } from "discord.js"
 import DB, { MusicChannelDocument } from "../../schemas/musicchannel.js"
 import { panelbutton } from "../../systems/button.js"
-import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils.js"
+import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js"
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -35,14 +35,24 @@ export default new SlashCommand({
 
                 if (data) { //if there is data which means already used /setup create
 
-                    const channel = await interaction.guild.channels.fetch(data.Channel) as BaseGuildTextChannel
+                    // channel may have been deleted manually - fetch safely so
+                    // recovery (delete stale doc + recreate) can run instead of throwing
+                    const channel = await interaction.guild.channels.fetch(data.Channel).catch(() => null) as BaseGuildTextChannel | null
                     if (channel) { //if there is data as well as the channel
                         //await interaction.deferReply({ ephemeral: true })
                         return editReply(interaction, "❌", `The music channel is already set on <#${channel.id}>`)
                     } else { //if there is data but not the channel
 
+                        // best-effort cleanup of the orphaned voice channel
+                        try {
+                            const vc = await interaction.guild.channels.fetch(data.VoiceChannel);
+                            if (vc && "deletable" in vc && vc.deletable) await vc.delete();
+                        } catch { }
+
                         await data.deleteOne()
+                        invalidateMusicChannelSetup(interaction.guild.id)
                         let newdata = await setupCreate(interaction, client)
+                        invalidateMusicChannelSetup(interaction.guild.id)
                         return editReply(interaction, "✅", `Successfully created the music setup in <#${newdata?.Channel}>`)
                     }
 
@@ -50,6 +60,7 @@ export default new SlashCommand({
 
                     //await interaction.deferReply()
                     let newdata = await setupCreate(interaction, client)
+                    invalidateMusicChannelSetup(interaction.guild.id)
 
                     editReply(interaction, "✅", `Successfully created the music setup in <#${newdata?.Channel}>`)
                 }
@@ -84,6 +95,7 @@ export default new SlashCommand({
                     } catch (error) { }
 
                     await data.deleteOne()
+                    invalidateMusicChannelSetup(interaction.guild.id)
                     editReply(interaction, "✅", "Successfully deleted the music setup for this server")
                 }
             }
@@ -230,12 +242,9 @@ async function setupCreate(interaction: ChatInputCommandInteraction, client: Cus
             `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
         )
 
-    const backgroundAttachment = player?.queue.current?.thumbnail ? null : getBackgroundAttachment();
-    const files = backgroundAttachment ? [backgroundAttachment] : [];
-
     const panel = await textChannel?.send({
         embeds: [mainEmbed],
-        components: [panelbutton], files: player?.queue.current?.thumbnail ? [] : (backgroundAttachment ? [backgroundAttachment] : [])
+        components: [panelbutton]
     })
 
     let data = await new DB({

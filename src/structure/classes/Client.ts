@@ -3,8 +3,7 @@ import mongoose from "mongoose";
 import { ClientDataOptions, CustomClientOptions, BaseApplicationCommand } from "../interfaces/index.js";
 import { Handler } from "./index.js";
 import { Logger } from "./Logger.js";
-import nodes from "../../systems/nodes.js";
-import { Shoukaku, Connectors } from "shoukaku";
+import { Shoukaku, Connectors, NodeOption } from "shoukaku";
 import { Kazagumo, KazagumoPlayer } from "kazagumo";
 import Spotify from "kazagumo-spotify";
 import config from "../../config.js";
@@ -44,6 +43,18 @@ export class CustomClient extends Client {
     color: ColorResolvable = "#009FFE";
 
     async initShoukaku() {
+        // Load nodes dynamically after env is loaded
+        const nodes: NodeOption[] = [
+            {
+                name: process.env.LAVALINK_NODE_NAME || "Lavalink",
+                url: process.env.LAVALINK_NODE_URL || "localhost:2333",
+                auth: process.env.LAVALINK_NODE_AUTH || "youshallnotpass",
+                secure: process.env.LAVALINK_NODE_SECURE === "true"
+            }
+        ];
+
+        this.logger.info("Lavalink", `Connecting to node: ${nodes[0].name} at ${nodes[0].url}`);
+
         // Initialize Kazagumo with Spotify plugin (it internally manages Shoukaku)
         this.kazagumo = new Kazagumo({
             defaultSearchEngine: "youtube",
@@ -89,6 +100,7 @@ export class CustomClient extends Client {
         this.handlers.loadEvents(this.data.handlers.events);
         this.handlers.loadCommands(this.data.handlers.commands);
         this.handlers.loadShoukakuEvents(this.data.handlers.shoukakuEvents);
+
 
         mongoose.set("strictQuery", false);
         mongoose.connect(this.data.devBotEnabled ? this.data.dev.db : this.data.prod.db)

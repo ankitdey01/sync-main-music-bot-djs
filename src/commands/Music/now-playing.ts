@@ -8,7 +8,7 @@ import {
   reply,
 } from "../../structure/index.js";
 import { KazagumoTrack } from "kazagumo";
-import { getBackgroundAttachment, getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
+import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
   data: new SlashCommandBuilder()
@@ -55,11 +55,6 @@ export default new SlashCommand({
       )
       .setImage(track.thumbnail || getBackgroundAttachmentUrl());
 
-    const backgroundAttachment = track.thumbnail
-      ? null
-      : getBackgroundAttachment();
-    const files = backgroundAttachment ? [backgroundAttachment] : [];
-
-    return interaction.editReply({ embeds: [Embed], files: track.thumbnail ? [] : (backgroundAttachment ? [backgroundAttachment] : []) });
+    return interaction.editReply({ embeds: [Embed] });
   },
 });

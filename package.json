@@ -22,8 +22,7 @@
         "kazagumo-spotify": "^2.1.1",
         "mongoose": "^9.1.5",
         "pretty-ms": "^7.0.1",
-        "shoukaku": "^4.2.0",
-        "youtube-sr": "^4.3.4"
+        "shoukaku": "^4.2.0"
     },
     "devDependencies": {
         "typescript": "^5.3.3"

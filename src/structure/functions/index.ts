@@ -4,6 +4,7 @@ export * from "./reply.js";
 export * from "./editReply.js";
 export * from "./check.js";
 export * from "./discordlog.js";
+export * from "./announcement.js";
 export * from "./setupUpdate.js";
 export * from "./mstotimestamp.js";
 export * from "./playsong.js"

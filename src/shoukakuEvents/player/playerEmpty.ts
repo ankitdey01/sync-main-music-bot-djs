@@ -1,10 +1,8 @@
 import { ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, BaseGuildTextChannel, TextChannel } from "discord.js";
 import { KazagumoPlayer, PlayerState } from "kazagumo";
-import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton.js";
 import emoji from "../../systems/emojis.js";
-import setupDB, { MusicChannelSchema } from "../../schemas/musicchannel.js";
-import { musicSetupUpdate, ShoukakuEvent, CustomClient } from "../../structure/index.js";
-import { buttonDisable } from "../../systems/button.js";
+import { musicSetupUpdate, getMusicChannelSetup, ShoukakuEvent, CustomClient } from "../../structure/index.js";
+import { clearChannelButtons } from "../../systems/button.js";
 import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new ShoukakuEvent({
@@ -17,17 +15,7 @@ export default new ShoukakuEvent({
         const channel = await client.channels?.fetch(player.textId).catch(() => null) as BaseGuildTextChannel;
         if (!channel) return;
 
-        // Disable buttons
-        const data = await buttonDB.find<TempButtonSchema>({
-            Guild: player.guildId,
-            Channel: player.textId
-        }).catch(() => []);
-
-        for (let i = 0; i < data.length; i++) {
-            const msg = await channel.messages?.fetch(data[i].MessageID).catch(() => null);
-            if (msg && msg.editable) await msg.edit({ components: [buttonDisable] }).catch(() => { });
-            if (data && data[i]) await data[i].deleteOne();
-        }
+        await clearChannelButtons(client, player.guildId, player.textId);
 
         if (channel.type !== ChannelType.GuildText) return;
         if (!channel.guild?.members.me?.permissionsIn(channel as TextChannel).has(PermissionFlagsBits.SendMessages)) return;
@@ -53,10 +41,7 @@ export default new ShoukakuEvent({
                 .setStyle(ButtonStyle.Link),
         );
 
-        const cdata = await setupDB.findOne<MusicChannelSchema>({
-            Guild: player.guildId,
-            Channel: player.textId
-        });
+        const cdata = await getMusicChannelSetup(player.guildId);
 
         if (!cdata) {
             await channel.send({
@@ -78,6 +63,6 @@ export default new ShoukakuEvent({
                 `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
             );
 
-        await musicSetupUpdate(client, player, setupDB, setupUpdateEmbed);
+        await musicSetupUpdate(client, player, setupUpdateEmbed);
     }
 });

@@ -20,6 +20,6 @@ export default new SlashCommand({
 
         player.pause(false)
 
-        return editReply(interaction, "▶", "**Resumed** the player")
+        return editReply(interaction, "▶", "Resumed the player")
     }
 })
