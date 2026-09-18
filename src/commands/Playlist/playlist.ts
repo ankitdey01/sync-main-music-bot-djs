@@ -344,19 +344,12 @@ export default new SlashCommand({
                             embeds: [errEmbed.setDescription(`\`❌\` | The playlist is empty. Use \`/playlist add\` to add new songs`)]
                         })
 
-                        const voiceChannelId = (interaction.member as GuildMember).voice.channel?.id;
-                        if (!voiceChannelId) return;
-
-                        const player = await client.kazagumo.createPlayer({
-                            guildId: interaction.guild?.id as string,
-                            voiceId: voiceChannelId,
-                            textId: interaction.channel?.id as string,
-                            deaf: true
-                        })
-
                         for (const song of list.songs) {
 
-                            playSong(interaction, client, player, song)
+                            // Skip the per-song Top.gg verification - it would fire
+                            // one HTTP call per track; playerStart still enforces
+                            // the daily cap when each track actually starts.
+                            await playSong(interaction, client, song, { enforceDailyLimit: false })
 
                             await wait.setTimeout(1200)
 

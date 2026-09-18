@@ -1,6 +1,5 @@
-import { ModalSubmitInteraction, Events, InteractionType, EmbedBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, BaseGuildTextChannel } from "discord.js"
-import { randomUUID } from "node:crypto"
-import { CustomClient, Event, AnnouncementPayload, announcePreviews, buildAnnouncementEmbed } from "../../structure/index.js"
+import { ModalSubmitInteraction, Events, InteractionType, EmbedBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js"
+import { CustomClient, Event, AnnouncementPayload, announcePreviews, stageAnnouncePreview, buildAnnouncementEmbed } from "../../structure/index.js"
 
 export default new Event({
     name: Events.InteractionCreate,
@@ -86,15 +85,16 @@ export default new Event({
                     requestedBy: interaction.user.id
                 }
 
-                const logAddress = client.data.devBotEnabled ? client.data.dev.log.guild : client.data.prod.log.guild
-                const logsChannel = await client.channels.fetch(logAddress).catch(() => null) as BaseGuildTextChannel | null
-
-                if (!logsChannel || !logsChannel.isTextBased()) {
-                    return interaction.editReply({ content: "❌ No logs channel is configured. Set the log channel ID in the environment variables first." })
+                // Discord rejects embeds over 6000 chars aggregate (title +
+                // description + footer + fields). Include the preview Status
+                // field that gets appended below before staging.
+                const statusValue = `⏳ **Preview** — will be sent to **${client.guilds.cache.size}** server(s), one message each. Confirm or reject below.`
+                const aggregateLength = payload.title.length + payload.description.length + (payload.footer?.length ?? 0) + "Status".length + statusValue.length
+                if (aggregateLength > 6000) {
+                    return interaction.editReply({ content: `❌ Combined title + description + footer (${aggregateLength} chars, incl. preview status) exceeds Discord's 6000-character embed limit. Shorten the fields and try again.` })
                 }
 
-                const previewId = randomUUID()
-                announcePreviews.set(previewId, payload)
+                const previewId = stageAnnouncePreview(payload)
 
                 const PreviewEmbed = buildAnnouncementEmbed(client, payload)
                     .addFields({
@@ -113,14 +113,9 @@ export default new Event({
                         .setStyle(ButtonStyle.Secondary)
                 )
 
-                const previewMessage = await logsChannel.send({ embeds: [PreviewEmbed], components: [row] }).catch(() => null)
-
-                if (!previewMessage) {
-                    announcePreviews.delete(previewId)
-                    return interaction.editReply({ content: "❌ Failed to send the preview to the logs channel." }).catch(() => { })
-                }
-
-                interaction.editReply({ content: `📤 Preview sent to <#${logsChannel.id}> — confirm or reject it there.` }).catch(() => { })
+                // Ephemeral preview to the requesting dev (this interaction is
+                // already deferred ephemerally) - confirm/reject runs from here.
+                interaction.editReply({ embeds: [PreviewEmbed], components: [row] }).catch(() => { })
 
             }
 

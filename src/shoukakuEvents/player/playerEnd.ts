@@ -7,12 +7,17 @@ export default new ShoukakuEvent({
     name: "playerEnd",
     async execute(player: KazagumoPlayer, track: KazagumoTrack, client: CustomClient) {
 
-        if (!track.requester) return;
+        // kazagumo emits PlayerEnd with no track for the "replaced" end reason
+        // (a new track started mid-playback) - nothing to record or clean then,
+        // the replacement's own playerStart handles it.
+        if (!track?.requester) return;
 
-        // Update played stats - single upsert with atomic increment
+        // Update played stats - single upsert with atomic increment.
+        // Missing/invalid track lengths contribute zero to Time, Played always +1.
+        const length = Number(track.length);
         await db.updateOne(
             { User: (track.requester as any)?.id },
-            { $inc: { Played: 1, Time: Number(track.length) } },
+            { $inc: { Played: 1, Time: Number.isFinite(length) && length > 0 ? length : 0 } },
             { upsert: true }
         ).catch(() => null);
 

@@ -1,6 +1,6 @@
 import { ChannelType, EmbedBuilder, PermissionFlagsBits, BaseGuildTextChannel, TextChannel } from "discord.js";
 import { KazagumoPlayer } from "kazagumo";
-import { CustomClient, ShoukakuEvent } from "../../structure/index.js";
+import { CustomClient, ShoukakuEvent, log } from "../../structure/index.js";
 
 export default new ShoukakuEvent({
     name: "playerException",
@@ -30,6 +30,9 @@ export default new ShoukakuEvent({
             .filter((line, i, arr) => line !== "All clients failed to load the item." || i === 0)
             .join("\n");
 
+        // Backticks inside the value would close the ``` fence below
+        const fenceSafe = reason.replace(/```/g, "`\u200b`\u200b`");
+
         // User-facing embed - clean and simple
         const userEmbed = new EmbedBuilder()
             .setColor("Red")
@@ -47,28 +50,22 @@ export default new ShoukakuEvent({
 
         await channel.send({ embeds: [userEmbed] }).catch(() => { });
 
-        // Log detailed error to error log channel
-        const errorChannelId = client.data.devBotEnabled 
-            ? client.data.dev.log.error 
-            : client.data.prod.log.error;
+        // Log detailed error to the error webhook
+        const logEmbed = new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("Player Exception")
+            .addFields(
+                { name: "Track", value: track?.title ?? "Unknown", inline: false },
+                { name: "Guild", value: `${channel.guild.name} (${channel.guild.id})`, inline: false },
+                { name: "Channel", value: `${channel.name} (${channel.id})`, inline: false },
+                { name: "Error Details", value: "```" + fenceSafe.slice(0, 1000) + "```", inline: false }
+            )
+            .setTimestamp();
 
-        if (errorChannelId) {
-            const errorChannel = await client.channels.fetch(errorChannelId).catch(() => null) as TextChannel;
-            
-            if (errorChannel && errorChannel.type === ChannelType.GuildText) {
-                const logEmbed = new EmbedBuilder()
-                    .setColor("Red")
-                    .setTitle("Player Exception")
-                    .addFields(
-                        { name: "Track", value: track?.title ?? "Unknown", inline: false },
-                        { name: "Guild", value: `${channel.guild.name} (${channel.guild.id})`, inline: false },
-                        { name: "Channel", value: `${channel.name} (${channel.id})`, inline: false },
-                        { name: "Error Details", value: "```" + reason.slice(0, 1000) + "```", inline: false }
-                    )
-                    .setTimestamp();
-
-                await errorChannel.send({ embeds: [logEmbed] }).catch(() => { });
-            }
-        }
+        await log(
+            client,
+            logEmbed,
+            client.data.devBotEnabled ? client.data.dev.webhook.error : client.data.prod.webhook.error
+        );
     }
 });

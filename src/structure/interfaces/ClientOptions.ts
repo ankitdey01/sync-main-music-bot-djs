@@ -10,10 +10,13 @@ export interface ClientDataOptions {
     links: LinksOptions;
     topgg: TopGGOptions;
     spotify: SpotifyOptions;
+    lavalink: LavalinkOptions;
     handlers: HandlersOptions;
     guilds: GuildsOptions;
     color: ColorResolvable;
     developers: string[];
+    maxSongsPerDay: number;
+    playerLimits: PlayerLimitsOptions;
     devBotEnabled: boolean;
 }
 
@@ -22,7 +25,6 @@ export interface DevOptions {
     secret: string;
     token: string;
     db: string;
-    log: LogOptions;
     webhook: WebhookOptions;
 }
 
@@ -31,14 +33,7 @@ export interface ProdOptions {
     secret: string;
     token: string;
     db: string;
-    log: LogOptions;
     webhook: WebhookOptions;
-}
-
-export interface LogOptions {
-    error: string;
-    guild: string;
-    command: string;
 }
 
 export interface WebhookOptions {
@@ -50,7 +45,6 @@ export interface WebhookOptions {
 export interface LinksOptions {
     invite: string;
     support: string;
-    background: string;
 }
 
 export interface TopGGOptions {
@@ -63,6 +57,10 @@ export interface SpotifyOptions {
     secret: string;
 }
 
+export interface LavalinkOptions {
+    webhook: string;
+}
+
 export interface HandlersOptions {
     commands: string;
     events: string;
@@ -71,4 +69,10 @@ export interface HandlersOptions {
 
 export interface GuildsOptions {
     dev: string[];
+}
+
+export interface PlayerLimitsOptions {
+    soloMaxMs: number;
+    multiMaxMs: number;
+    warningBeforeMs: number;
 }

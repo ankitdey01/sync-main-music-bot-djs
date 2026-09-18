@@ -1,8 +1,7 @@
 import { Events, GuildMember, VoiceState, BaseGuildTextChannel, EmbedBuilder } from "discord.js";
 import { KazagumoPlayer, PlayerState } from "kazagumo";
-import { CustomClient, Event, musicSetupUpdate } from "../../structure/index.js";
+import { CustomClient, Event, idlePanelEmbed, musicSetupUpdate } from "../../structure/index.js";
 import { clearChannelButtons } from "../../systems/button.js";
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 // Pending leave-timers per guild, in a module-level map instead of ad-hoc
 // properties on channel objects - every path can cancel the right timer
@@ -29,7 +28,11 @@ export default new Event({
             clearInactivityTimer(oldState.guild.id);
 
             const player = client.kazagumo.getPlayer(oldState.guild.id);
-            if (!player || player.state !== PlayerState.CONNECTED) return;
+            // Skip only when there is no player left to clean up. Kazagumo
+            // doesn't flip player.state when shoukaku's connection closes, but
+            // a DESTROYING/DESTROYED player is already gone - everything else
+            // (even a closed connection) still needs the teardown + panel reset.
+            if (!player || player.state === PlayerState.DESTROYING || player.state === PlayerState.DESTROYED) return;
 
             await clearChannelButtons(client, oldState.guild.id, player.textId as string);
 
@@ -40,22 +43,21 @@ export default new Event({
             // playerClosed can't fire here - destroy() removed the player's
             // listeners before Lavalink's close event arrives - so reset the
             // setup panel explicitly, same as every other stop path.
-            const setupUpdateEmbed = new EmbedBuilder()
-                .setColor(client.color)
-                .setTitle(`No song playing currently`)
-                .setImage(getBackgroundAttachmentUrl())
-                .setDescription(
-                    `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
-                );
+            const setupUpdateEmbed = idlePanelEmbed(client);
 
             await musicSetupUpdate(client, player, setupUpdateEmbed);
             return;
         }
 
-        // Someone left their voice channel
-        if (oldState.channelId && !newState.channelId) {
+        // Someone left the bot's channel (disconnect or move away).
+        // oldState.channelId !== newState.channelId distinguishes moves from
+        // pure disconnects: a move out of the bot's VC schedules the timer,
+        // a move between unrelated channels leaves the bot's VC untouched.
+        if (oldState.channelId && oldState.channelId !== newState.channelId) {
             const botVoiceState = (oldState.guild.members.me as GuildMember).voice;
             if (!botVoiceState.channel) return;
+            // Only a leave/move out of the bot's own channel can empty it.
+            if (oldState.channelId !== botVoiceState.channel.id) return;
 
             const player = client.kazagumo.getPlayer(oldState.guild.id);
             if (!player) return;
@@ -93,14 +95,23 @@ export default new Event({
                     }
 
                     await clearChannelButtons(client, oldState.guild.id, current.textId as string);
+
+                    // destroy() removed the player's listeners, so playerEmpty/
+                    // playerClosed can't reset the setup panel - do it explicitly,
+                    // same as the manual-disconnect path above.
+                    const setupUpdateEmbed = idlePanelEmbed(client);
+
+                    await musicSetupUpdate(client, current, setupUpdateEmbed);
                 }, INACTIVITY_TIMEOUT_MS);
                 inactivityTimers.set(oldState.guild.id, timer);
             }
             return;
         }
 
-        // Someone joined a voice channel
-        if (!oldState.channelId && newState.channelId) {
+        // Someone joined the bot's channel (fresh join or move in).
+        // newState.channelId !== oldState.channelId distinguishes moves from
+        // pure joins: entering the bot's VC cancels the pending leave.
+        if (newState.channelId && newState.channelId !== oldState.channelId) {
             const botVoiceState = (newState.guild.members.me as GuildMember).voice;
             if (!botVoiceState.channel) return;
 

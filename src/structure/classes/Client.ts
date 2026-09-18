@@ -3,9 +3,10 @@ import mongoose from "mongoose";
 import { ClientDataOptions, CustomClientOptions, BaseApplicationCommand } from "../interfaces/index.js";
 import { Handler } from "./index.js";
 import { Logger } from "./Logger.js";
-import { Shoukaku, Connectors, NodeOption } from "shoukaku";
+import { schedulePlayerLimits, clearPlayerLimits } from "../functions/playerLimits.js";import { Shoukaku, Connectors, NodeOption } from "shoukaku";
 import { Kazagumo, KazagumoPlayer } from "kazagumo";
 import Spotify from "kazagumo-spotify";
+import { ensureDailyPlaysIndex } from "../../schemas/dailyplays.js";
 import config from "../../config.js";
 
 const clientID: string = config.spotify.id;
@@ -40,7 +41,7 @@ export class CustomClient extends Client {
         this.setMaxListeners(20);
     }
 
-    color: ColorResolvable = "#009FFE";
+    color: ColorResolvable = "#000000";
 
     async initShoukaku() {
         // Load nodes dynamically after env is loaded
@@ -84,6 +85,19 @@ export class CustomClient extends Client {
 
         this.shoukaku = this.kazagumo.shoukaku;
 
+        // Stamp each player's creation time so the owner Players panel can
+        // show "playing since" (Kazagumo tracks no uptime itself), and arm
+        // the session-length checkpoints (2h solo / 3h max).
+        this.kazagumo.on("playerCreate", (player) => {
+            player.data.set("createdAt", Date.now());
+            schedulePlayerLimits(this, player);
+        });
+
+        // Player is gone (stopped, empty VC, expired) - cancel its checkpoints
+        this.kazagumo.on("playerDestroy", (player) => {
+            clearPlayerLimits(player);
+        });
+
         // Handle shoukaku errors
         this.shoukaku.on("error", (_, error) => {
             this.logger.error("Shoukaku", `Error: ${error.message}`);
@@ -96,44 +110,39 @@ export class CustomClient extends Client {
 
         await this.login(this.data.devBotEnabled ? this.data.dev.token : this.data.prod.token);
 
+        // Connect the database and prepare the daily-plays unique index
+        // before loading interaction handlers or accepting commands, so
+        // limited playback never runs against unprepared indexes.
+        mongoose.set("strictQuery", false);
+        try {
+            const data = await mongoose.connect(this.data.devBotEnabled ? this.data.dev.db : this.data.prod.db);
+            this.logger.info("Database", "Connected to : " + this.logger.highlight(data.connection.name, "success"));
+            // Dedupe + build the unique User+Date index for daily plays
+            await ensureDailyPlaysIndex();
+        } catch {
+            this.logger.error("Database", "Error Connecting to Database or preparing indexes - stopping startup!");
+            throw new Error("Database initialization failed");
+        }
+
         this.handlers.catchErrors();
         this.handlers.loadEvents(this.data.handlers.events);
         this.handlers.loadCommands(this.data.handlers.commands);
         this.handlers.loadShoukakuEvents(this.data.handlers.shoukakuEvents);
-
-
-        mongoose.set("strictQuery", false);
-        mongoose.connect(this.data.devBotEnabled ? this.data.dev.db : this.data.prod.db)
-            .then((data) => {
-                this.logger.info("Database", "Connected to : " + this.logger.highlight(data.connection.name, "success"));
-            })
-            .catch(() => {
-                this.logger.error("Database", "Error Connecting to Database!");
-            });
     }
 
     /**
      * Get retry delay based on retry count
-     * - Every 5 seconds up to 20 seconds (attempts 1-4)
-     * - Every minute up to 5 minutes (attempts 5-9)
-     * - Every hour up to 3 hours (attempts 10-12)
-     * - Returns null if max retries exceeded
+     * - Every 5 minutes, 5 times (attempts 1-5)
+     * - Every 30 minutes, 5 times (attempts 6-10)
+     * - Every hour, forever after that (attempt 11+)
      */
-    private getRetryDelay(retryCount: number): number | null {
-        if (retryCount < 4) {
-            // Every 5 seconds: 5s, 10s, 15s, 20s
-            return (retryCount + 1) * 5 * 1000;
-        } else if (retryCount < 9) {
-            // Every minute: 1m, 2m, 3m, 4m, 5m
-            const minuteOffset = retryCount - 3;
-            return minuteOffset * 60 * 1000;
-        } else if (retryCount < 12) {
-            // Every hour: 1h, 2h, 3h
-            const hourOffset = retryCount - 8;
-            return hourOffset * 60 * 60 * 1000;
+    private getRetryDelay(retryCount: number): number {
+        if (retryCount < 5) {
+            return 5 * 60 * 1000;
+        } else if (retryCount < 10) {
+            return 30 * 60 * 1000;
         } else {
-            // Max retries exceeded
-            return null;
+            return 60 * 60 * 1000;
         }
     }
 
@@ -149,12 +158,22 @@ export class CustomClient extends Client {
     }
 
     /**
-     * Schedule a retry for a failed node connection
+     * How many reconnect attempts have been made for a node (0 if none tracked)
      */
-    public scheduleNodeRetry(nodeName: string, errorMessage: string): void {
+    public getNodeRetryCount(nodeName: string): number {
+        return this.nodeRetryTracking.get(nodeName)?.retryCount ?? 0;
+    }
+
+    /**
+     * Schedule a retry for a failed node connection.
+     * Retries forever: every 5m x5, then every 30m x5, then every 1h.
+     * Returns true when a retry was actually scheduled (ECONNREFUSED),
+     * false otherwise so callers don't claim scheduled retries for other errors.
+     */
+    public scheduleNodeRetry(nodeName: string, errorMessage: string): boolean {
         // Check if error is ECONNREFUSED
         if (!errorMessage.includes("ECONNREFUSED")) {
-            return;
+            return false;
         }
 
         let tracking = this.nodeRetryTracking.get(nodeName);
@@ -175,21 +194,13 @@ export class CustomClient extends Client {
 
         const delay = this.getRetryDelay(tracking.retryCount);
 
-        if (delay === null) {
-            this.logger.error("Lavalink", `Node ${nodeName} max retries exceeded. Stopping reconnection attempts.`);
-            this.nodeRetryTracking.delete(nodeName);
-            return;
-        }
-
         // Log retry attempt info
-        const delaySeconds = delay / 1000;
-        const delayText = delaySeconds < 60
-            ? `${delaySeconds}s`
-            : delaySeconds < 3600
-                ? `${Math.floor(delaySeconds / 60)}m`
-                : `${Math.floor(delaySeconds / 3600)}h`;
+        const delayMinutes = delay / 60000;
+        const delayText = delayMinutes < 60
+            ? `${delayMinutes}m`
+            : `${Math.floor(delayMinutes / 60)}h`;
 
-        this.logger.info("Lavalink", `Node ${nodeName} will retry connection in ${delayText} (attempt ${tracking.retryCount + 1}/12)`);
+        this.logger.info("Lavalink", `Node ${nodeName} will retry connection in ${delayText} (attempt ${tracking.retryCount + 1}, retries never stop)`);
 
         // Schedule retry
         tracking.timeoutId = setTimeout(() => {
@@ -198,6 +209,7 @@ export class CustomClient extends Client {
 
         tracking.retryCount++;
         tracking.lastRetryTime = Date.now();
+        return true;
     }
 
     /**

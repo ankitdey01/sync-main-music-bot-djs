@@ -1,5 +1,6 @@
-import { ButtonInteraction, EmbedBuilder, Events, ActionRowBuilder, TextInputBuilder, TextInputStyle, ModalBuilder, LabelBuilder, italic, ColorResolvable } from "discord.js"
-import { CustomClient, Event, paginate, reply, announcePreviews, buildAnnouncementEmbed, broadcastAnnouncement, formatAnnounceList } from "../../structure/index.js"
+import { ButtonInteraction, EmbedBuilder, Events, TextInputBuilder, TextInputStyle, ModalBuilder, LabelBuilder, ColorResolvable, MessageFlags } from "discord.js"
+import { KazagumoPlayer } from "kazagumo"
+import { CustomClient, Event, paginate, reply, editReply, announcePreviews, broadcastAnnouncement, formatAnnounceList, msToTimestamp } from "../../structure/index.js"
 
 export default new Event({
     name: Events.InteractionCreate,
@@ -11,7 +12,7 @@ export default new Event({
             return handleAnnounceDecision(interaction, client)
         }
 
-        if (!["owner-leave", "owner-servers", "owner-eval", "owner-announce"].includes(interaction.customId)) return
+        if (!["owner-leave", "owner-servers", "owner-eval", "owner-announce", "owner-players"].includes(interaction.customId)) return
 
         if (!client.data.developers.includes(interaction.user.id)) return reply(
             interaction, "❌", "You cannot use this buttons", true
@@ -21,8 +22,24 @@ export default new Event({
 
             case "owner-servers": {
 
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
                 const servers = serverEmbed(Array.from(client.guilds.cache), 10, client)
-                paginate(interaction, servers)
+                await paginate(interaction, servers)
+
+            }
+                break;
+
+            case "owner-players": {
+
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+                const players = Array.from(client.kazagumo.players.values())
+
+                if (!players.length) {
+                    return editReply(interaction, "❌", "No active players right now")
+                }
+
+                const embeds = playerEmbeds(players, client)
+                await paginate(interaction, embeds)
 
             }
                 break;
@@ -109,7 +126,10 @@ export default new Event({
                     .setStyle(TextInputStyle.Short)
                     .setPlaceholder("Embed footer text (optional)")
                     .setRequired(false)
-                    .setMaxLength(2048)
+                    // Capped at 1500 (not Discord's 2048) so title (256) +
+                    // description (4000) + footer + preview Status field can
+                    // never exceed Discord's 6000-char aggregate embed limit.
+                    .setMaxLength(1500)
 
                 modal.addLabelComponents(
                     new LabelBuilder().setLabel("TITLE").setTextInputComponent(title),
@@ -172,17 +192,77 @@ async function handleAnnounceDecision(interaction: ButtonInteraction, client: Cu
 
     const { sent, failed } = await broadcastAnnouncement(client, payload)
 
+    // Keep the combined description under Discord's 4096-char embed limit so
+    // the final edit can't fail and leave the stale "Broadcasting..." status;
+    // the totals above still reflect every server.
+    const clip = (text: string, max: number) => text.length > max ? text.slice(0, max - 1) + "…" : text
+
     const ReportEmbed = new EmbedBuilder()
         .setColor(client.color)
         .setTitle("__Announcement Report__")
         .setDescription(
-            `**✅ Sent: ${sent.length} server(s)**\n\`\`\`${formatAnnounceList(sent)}\`\`\`` +
-            `**❌ Not sent: ${failed.length} server(s)**\n\`\`\`${formatAnnounceList(failed)}\`\`\``
+            `**✅ Sent: ${sent.length} server(s)**\n\`\`\`${clip(formatAnnounceList(sent), 1600)}\`\`\`` +
+            `**❌ Not sent: ${failed.length} server(s)**\n\`\`\`${clip(formatAnnounceList(failed), 1600)}\`\`\``
         )
         .setFooter({ text: `Requested by ${payload.requestedBy}` })
         .setTimestamp()
 
     await interaction.message.edit({ embeds: [ReportEmbed], components: [] }).catch(() => { })
+}
+
+function playerEmbeds(players: KazagumoPlayer[], client: CustomClient): EmbedBuilder[] {
+
+    return players.map((player, index) => {
+
+        const guild = client.guilds.cache.get(player.guildId)
+        const track = player.queue.current
+
+        const requester = track?.requester as { id?: string; username?: string; tag?: string } | undefined
+
+        // Listeners = non-bot members in the player's voice channel, else Unavailable
+        let listeners = "Unavailable"
+        const voiceChannel = player.voiceId ? guild?.channels.cache.get(player.voiceId) : undefined
+        if (voiceChannel && voiceChannel.isVoiceBased()) {
+            listeners = `${voiceChannel.members.filter(m => !m.user.bot).size}`
+        }
+
+        // Playing since = elapsed wall-clock time since the player was created.
+        // Backfill the stamp for players created before this tracking existed.
+        let createdAt = player.data.get("createdAt") as number | undefined
+        if (!createdAt) {
+            createdAt = Date.now()
+            player.data.set("createdAt", createdAt)
+        }
+
+        const playingSince = `<t:${Math.floor(createdAt / 1000)}:R> (\`${msToTimestamp(Date.now() - createdAt)}\`)`
+
+        const state = player.paused ? "⏸ Paused" : player.playing ? "▶ Playing" : "⏹ Idle"
+
+        return new EmbedBuilder()
+            .setColor(client.color)
+            .setAuthor({ name: `${client.user?.username} • Active Players (${players.length})`, iconURL: guild?.iconURL() ?? client.user?.displayAvatarURL() })
+            .setTitle(`${guild?.name ?? "Unknown guild"}`)
+            .setDescription(
+                track
+                    ? `**[${track.title}](${track.uri || track.realUri || `https://www.google.com/search?q=${encodeURIComponent(track.title)}`})**\nby \`${track.author ?? "Unknown"}\``
+                    : "*Nothing currently playing*"
+            )
+            .addFields(
+                { name: "Guild ID", value: `\`${player.guildId}\``, inline: true },
+                { name: "Queue size", value: `\`${player.queue.size}\` (+ current = \`${player.queue.totalSize}\`)`, inline: true },
+                { name: "Listeners", value: `\`${listeners}\``, inline: true },
+                {
+                    name: "Requester",
+                    value: requester?.id ? `<@${requester.id}> (\`${requester.username ?? requester.tag ?? "Unknown"}\` • \`${requester.id}\`)` : "`Unknown`",
+                    inline: false
+                },
+                { name: "Playing since", value: playingSince, inline: true },
+                { name: "State", value: `\`${state}\``, inline: true }
+            )
+            .setFooter({ text: `Player ${index + 1} of ${players.length} • VC: ${player.voiceId ?? "Unknown"}` })
+            .setTimestamp()
+    })
+
 }
 
 function serverEmbed(pages: any[], number: number, client: CustomClient): EmbedBuilder[] {

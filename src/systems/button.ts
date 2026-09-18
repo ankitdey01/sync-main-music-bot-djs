@@ -92,23 +92,40 @@ const panelbutton = new ActionRowBuilder<ButtonBuilder>().addComponents(
 )
 
 /**
- * Disable the buttons on a channel's active NOW PLAYING message(s) and remove
- * their tracking documents. Safe to call when there is nothing to clean.
+ * Disable the buttons on a guild's active NOW PLAYING message(s) and remove
+ * their tracking documents. Sweeps the whole guild - not just the current
+ * channel - so orphaned button docs (e.g. left behind when a cleanup was
+ * skipped) are disabled too and can never survive into the next session.
+ * Safe to call when there is nothing to clean.
  */
 export async function clearChannelButtons(client: CustomClient, guildId: string, textId: string): Promise<void> {
-    const data = await buttonDB.find<TempButtonSchema>({ Guild: guildId, Channel: textId }).catch(() => []);
+    const data = await buttonDB.find<TempButtonSchema>({ Guild: guildId }).catch(() => []);
     if (!data.length) return;
 
-    const channel = await client.channels.fetch(textId).catch(() => null);
-    if (channel && channel.isTextBased()) {
-        for (const doc of data) {
-            const msg = await channel.messages.fetch(doc.MessageID).catch(() => null);
-            if (msg && msg.editable) await msg.edit({ components: [buttonDisable] }).catch(() => { });
+    // Group leftovers per channel; the current channel goes first so it is
+    // always cleaned even if a later channel fetch misbehaves.
+    const byChannel = new Map<string, TempButtonSchema[]>();
+    for (const doc of data) {
+        const list = byChannel.get(doc.Channel) ?? [];
+        list.push(doc);
+        byChannel.set(doc.Channel, list);
+    }
+
+    const channelIds = [textId, ...[...byChannel.keys()].filter((id) => id !== textId)]
+        .filter((id) => byChannel.has(id));
+
+    for (const channelId of channelIds) {
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (channel && channel.isTextBased()) {
+            for (const doc of byChannel.get(channelId) ?? []) {
+                const msg = await channel.messages.fetch(doc.MessageID).catch(() => null);
+                if (msg && msg.editable) await msg.edit({ components: [buttonDisable] }).catch(() => { });
+            }
         }
     }
 
-    // Remove the tracking docs even when the channel itself is gone
-    await buttonDB.deleteMany({ Guild: guildId, Channel: textId }).catch(() => { });
+    // Remove the tracking docs even when channels/messages are gone
+    await buttonDB.deleteMany({ Guild: guildId }).catch(() => { });
 }
 
 export { buttonDisable, buttonEnable, panelbutton }

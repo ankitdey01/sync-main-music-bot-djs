@@ -8,7 +8,6 @@ import {
   reply,
 } from "../../structure/index.js";
 import { KazagumoTrack } from "kazagumo";
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
   data: new SlashCommandBuilder()
@@ -53,7 +52,7 @@ export default new SlashCommand({
           inline: true,
         },
       )
-      .setImage(track.thumbnail || getBackgroundAttachmentUrl());
+      .setImage(track.thumbnail || process.env.BACKGROUND_URL || null);
 
     return interaction.editReply({ embeds: [Embed] });
   },

@@ -1,5 +1,5 @@
 import { ChannelType, Colors, EmbedBuilder, Events, RESTPostAPIApplicationCommandsJSONBody, SlashCommandBuilder } from "discord.js";
-import { getAllFiles } from "../functions/index.js";
+import { getAllFiles, log } from "../functions/index.js";
 import { Event, SlashCommand, ShoukakuEvent, BaseApplicationCommand } from "../interfaces/index.js";
 import { CustomClient } from "./index.js";
 
@@ -93,58 +93,40 @@ export class Handler {
             .setColor(Colors.Red)
             .setTimestamp();
 
-        const logsChannelId = this.client.data.devBotEnabled ? this.client.data.dev.log.error : this.client.data.prod.log.error;
+        const errorWebhook = this.client.data.devBotEnabled ? this.client.data.dev.webhook.error : this.client.data.prod.webhook.error;
+        const pings = this.client.data.developers.filter(Boolean).map((id) => `<@${id}>`).join(" ") || undefined;
 
         process
             .on("uncaughtException", async (err) => {
                 this.client.logger.error("System", `Uncaught Exception : ${err}`);
-                const channel = await this.client.channels.fetch(logsChannelId).catch(() => { });
-                if (!channel || channel.type !== ChannelType.GuildText) return;
-
-                channel.send({
-                    embeds: [
-                        embed
-                            .setTitle("`⚠` | Uncaught Exception/Catch")
-                            .setDescription([
-                                "```" + err.stack + "```"
-                            ].join("\n"))
-                    ]
-                }).catch(() => { });
+                await log(this.client, EmbedBuilder.from(embed)
+                    .setTitle("`⚠` | Uncaught Exception/Catch")
+                    .setDescription([
+                        "```" + String(err.stack).slice(0, 3900) + "```"
+                    ].join("\n")), errorWebhook, pings);
             })
             .on("uncaughtExceptionMonitor", async (err) => {
                 this.client.logger.error("System", `Uncaught Exception (Monitor) : ${err}`);
-                const channel = await this.client.channels.fetch(logsChannelId).catch(() => { });
-                if (!channel || channel.type !== ChannelType.GuildText) return;
-
-                channel.send({
-                    embeds: [
-                        embed
-                            .setTitle("`⚠` | Uncaught Exception/Catch (MONITOR)")
-                            .setDescription([
-                                "```" + err.stack + "```"
-                            ].join("\n"))
-                    ]
-                }).catch(() => { });
+                // No pings here: uncaughtException above already pinged for the
+                // same exception (Node emits both) - keep logging + webhook only.
+                await log(this.client, EmbedBuilder.from(embed)
+                    .setTitle("`⚠` | Uncaught Exception/Catch (MONITOR)")
+                    .setDescription([
+                        "```" + String(err.stack).slice(0, 3900) + "```"
+                    ].join("\n")), errorWebhook);
             })
             .on("unhandledRejection", async (reason: Error) => {
                 // Filter out the known ES module exports error from dependencies
                 if (reason.message?.includes("exports is not defined in ES module scope")) {
                     return;
                 }
-                
-                this.client.logger.error("System", `Unhandled Rejection/Catch : ${reason}`);
-                const channel = await this.client.channels.fetch(logsChannelId).catch(() => { });
-                if (!channel || channel.type !== ChannelType.GuildText) return;
 
-                channel.send({
-                    embeds: [
-                        embed
-                            .setTitle("`⚠` | Unhandled Rejection/Catch")
-                            .setDescription([
-                                "```" + reason.stack + "```"
-                            ].join("\n"))
-                    ]
-                }).catch(() => { });
+                this.client.logger.error("System", `Unhandled Rejection/Catch : ${reason}`);
+                await log(this.client, EmbedBuilder.from(embed)
+                    .setTitle("`⚠` | Unhandled Rejection/Catch")
+                    .setDescription([
+                        "```" + String(reason.stack).slice(0, 3900) + "```"
+                    ].join("\n")), errorWebhook, pings);
             });
     }
 }

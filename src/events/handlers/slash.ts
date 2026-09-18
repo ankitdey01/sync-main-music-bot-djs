@@ -97,7 +97,7 @@ export default new Event({
         if (!interaction.replied && !interaction.deferred) {
             try {
                 const Embed = new EmbedBuilder()
-                    .setColor("DarkBlue")
+                    .setColor("#000000")
                     .setAuthor({ name: `${interaction.guild?.name}`, iconURL: interaction.guild?.iconURL() || client.user?.displayAvatarURL() })
                     .setDescription(`\`\`\`Used In: ${interaction.guild?.name} (${interaction.guild?.id})\
             \nCommand Used: ${interaction.commandName} (${interaction.commandId})\

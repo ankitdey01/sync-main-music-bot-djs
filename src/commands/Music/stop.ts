@@ -1,7 +1,6 @@
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { SlashCommand, memberVoice, botVC, differentVoice, musicSetupUpdate, reply, editReply } from "../../structure/index.js";
+import { SlashCommandBuilder } from "discord.js";
+import { SlashCommand, memberVoice, botVC, differentVoice, musicSetupUpdate, idlePanelEmbed, reply, editReply } from "../../structure/index.js";
 import { clearChannelButtons } from "../../systems/button.js";
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -24,13 +23,7 @@ export default new SlashCommand({
         if (player.state == 1) player.disconnect()
         player.destroy()
 
-        const setupUpdateEmbed = new EmbedBuilder()
-            .setColor(client.color)
-            .setTitle(`No song playing currently`)
-            .setImage(getBackgroundAttachmentUrl())
-            .setDescription(
-                `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
-            )
+        const setupUpdateEmbed = idlePanelEmbed(client)
         await musicSetupUpdate(client, player, setupUpdateEmbed)
 
         return editReply(interaction, "⏹", "Stopped the player")

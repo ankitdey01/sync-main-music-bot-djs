@@ -4,7 +4,9 @@ import { reply } from "./index.js";
 type ValidInteraction = ChatInputCommandInteraction | ButtonInteraction | ModalSubmitInteraction | AnySelectMenuInteraction
 
 export async function paginate(interaction: ValidInteraction, embeds: EmbedBuilder[]) {
-    await interaction.deferReply();
+    if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply();
+    }
 
     const previousPage = "<:white_hard_left:1062415226219266068>";
     const nextPage = "<:white_hard_right:1062415230971424808>";

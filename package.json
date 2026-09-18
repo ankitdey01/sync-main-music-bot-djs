@@ -1,13 +1,14 @@
 {
-    "name": "sync-music-ts",
-    "version": "1.0.11",
+    "name": "sync-music",
+    "version": "2.0.0",
     "description": "Sync Music",
     "main": "./dist/index.js",
     "type": "module",
     "scripts": {
         "lint": "eslint . --ext .ts",
         "fix": "eslint . --ext .ts --fix",
-        "start": "tsc && node ."
+        "start": "tsc && node .",
+        "dev": "tsx watch src/index.ts"
     },
     "keywords": [],
     "author": "ankitdey01",
@@ -18,6 +19,7 @@
         "discord-arts": "^0.3.6",
         "discord.js": "^14.25.1",
         "dotenv": "^17.4.2",
+        "express": "^5.2.1",
         "kazagumo": "^3.4.0",
         "kazagumo-spotify": "^2.1.1",
         "mongoose": "^9.1.5",
@@ -25,6 +27,9 @@
         "shoukaku": "^4.2.0"
     },
     "devDependencies": {
+        "@types/express": "^5.0.6",
+        "@types/node": "^22.20.3",
+        "tsx": "^4.23.13",
         "typescript": "^5.3.3"
     }
 }

@@ -34,7 +34,12 @@ export default new Event({
                 new ButtonBuilder()
                     .setCustomId("owner-announce")
                     .setLabel("Announce")
-                    .setStyle(ButtonStyle.Danger)
+                    .setStyle(ButtonStyle.Danger),
+
+                new ButtonBuilder()
+                    .setCustomId("owner-players")
+                    .setLabel("Players")
+                    .setStyle(ButtonStyle.Secondary)
             );
 
             const ownerEmbed = new EmbedBuilder()
@@ -43,7 +48,7 @@ export default new Event({
                 .setTimestamp()
                 .setThumbnail(`${client.user?.displayAvatarURL()}`)
                 .setFooter({ text: "Owner Panel" })
-                .setDescription(`**Servers\nLeave Guild\nEval\nAnnounce**`);
+                .setDescription(`**Servers\nLeave Guild\nEval\nAnnounce\nPlayers**`);
 
             return message.reply({ embeds: [ownerEmbed], components: [settings] });
         }

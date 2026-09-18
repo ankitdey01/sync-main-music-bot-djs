@@ -2,7 +2,6 @@ import { CustomClient, SlashCommand, reply, editReply, invalidateMusicChannelSet
 import { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits, Guild, ChatInputCommandInteraction, GuildChannel, CategoryChannel, BaseGuildTextChannel, OverwriteType } from "discord.js"
 import DB, { MusicChannelDocument } from "../../schemas/musicchannel.js"
 import { panelbutton } from "../../systems/button.js"
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js"
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -223,21 +222,21 @@ async function setupCreate(interaction: ChatInputCommandInteraction, client: Cus
 
     })
 
-    let title: string, image: string
+    let title: string, image: string | null
     const player = client.kazagumo.getPlayer(interaction.guild?.id as string)
 
     if (player && player.playing && player.queue.current) {
         title = player.queue.current.title || "Unknown track"
-        image = player.queue.current.thumbnail || getBackgroundAttachmentUrl();
+        image = player.queue.current.thumbnail || process.env.BACKGROUND_URL || null;
     } else {
         title = `No song playing currently`
-        image = getBackgroundAttachmentUrl()
+        image = process.env.BACKGROUND_URL || null
     }
 
     let mainEmbed = new EmbedBuilder()
         .setColor(client.color)
         .setTitle(`${title}`)
-        .setImage(`${image}`)
+        .setImage(image)
         .setDescription(
             `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
         )

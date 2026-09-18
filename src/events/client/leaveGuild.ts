@@ -16,6 +16,6 @@ export default new Event({
                     \nMembers: ${guild.memberCount}\`\`\``)
             .setFooter({ text: `Total - ${client.guilds.cache.size}` })
 
-        log(client, Embed, client.data.devBotEnabled ? client.data.dev.log.guild : client.data.prod.log.guild)
+        log(client, Embed, client.data.devBotEnabled ? client.data.dev.webhook.guild : client.data.prod.webhook.guild)
     }
 })

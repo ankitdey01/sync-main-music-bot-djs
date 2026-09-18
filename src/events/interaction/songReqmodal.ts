@@ -1,4 +1,4 @@
-import { ModalSubmitInteraction, Events, InteractionType, GuildMember, MessageFlags } from "discord.js"
+import { ModalSubmitInteraction, Events, InteractionType, MessageFlags } from "discord.js"
 import { CustomClient, editReply, Event, playSong } from "../../structure/index.js"
 
 export default new Event({
@@ -16,14 +16,7 @@ export default new Event({
 
         if (!interaction.channel) return editReply(interaction, "❌", `An **error** has occured! Please report to us using \`/report\`.`)
 
-            const player = await client.kazagumo.createPlayer({
-                guildId: interaction.guild.id,
-                voiceId: (interaction.member as GuildMember)?.voice.channel?.id!,
-                textId: interaction.channel.id,
-                deaf: true
-            })
-
-        playSong(interaction, client, player, query)
+        playSong(interaction, client, query)
 
     }
 })

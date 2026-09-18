@@ -1,4 +1,4 @@
-import { GuildMember, SlashCommandBuilder } from "discord.js"
+import { SlashCommandBuilder } from "discord.js"
 import { SlashCommand, playSong, memberVoice, joinable, differentVoice, stageCheck, reply, editReply } from "../../structure/index.js"
 
 export default new SlashCommand({
@@ -23,17 +23,7 @@ export default new SlashCommand({
 
         const query = interaction.options.getString("query", true)
 
-        const voiceChannelId = (interaction.member as GuildMember)?.voice?.channel?.id;
-        if (!voiceChannelId) return;
-
-        const player = await client.kazagumo.createPlayer({
-            guildId: interaction.guild?.id as string,
-            voiceId: voiceChannelId,
-            textId: interaction.channel?.id as string,
-            deaf: true
-        })
-
-        playSong(interaction, client, player, query)
+        playSong(interaction, client, query)
 
     }
 })

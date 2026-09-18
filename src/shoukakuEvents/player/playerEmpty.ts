@@ -1,24 +1,33 @@
 import { ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, BaseGuildTextChannel, TextChannel } from "discord.js";
 import { KazagumoPlayer, PlayerState } from "kazagumo";
 import emoji from "../../systems/emojis.js";
-import { musicSetupUpdate, getMusicChannelSetup, ShoukakuEvent, CustomClient } from "../../structure/index.js";
+import { musicSetupUpdate, getMusicChannelSetup, idlePanelEmbed, ShoukakuEvent, CustomClient } from "../../structure/index.js";
 import { clearChannelButtons } from "../../systems/button.js";
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new ShoukakuEvent({
     name: "playerEmpty",
     async execute(player: KazagumoPlayer, client: CustomClient) {
         //console.log(`[PLAYER_EMPTY] Disconnecting from voice channel in guild`);
 
+        // Teardown first and unconditionally - it must never be skipped by a
+        // messaging failure (e.g. playback ran in a voice channel's text
+        // chat, or the channel is gone). This also clears stale button docs
+        // guild-wide, so leftovers can't survive into the next session.
+        await clearChannelButtons(client, player.guildId, player.textId ?? "");
+
+        //console.log(`[PLAYER_EMPTY] Disconnecting from voice channel in guild ${player.guildId}`);
+        if (player.state == 1) player.disconnect();
+        if (player.state !== PlayerState.DESTROYING && player.state !== PlayerState.DESTROYED) await player.destroy()
+
         if (!player.textId) return;
-        if (!client.channels) return;
-        const channel = await client.channels?.fetch(player.textId).catch(() => null) as BaseGuildTextChannel;
-        if (!channel) return;
+        const channel = await client.channels?.fetch(player.textId).catch(() => null) as BaseGuildTextChannel | null;
 
-        await clearChannelButtons(client, player.guildId, player.textId);
+        const cdata = await getMusicChannelSetup(player.guildId);
 
-        if (channel.type !== ChannelType.GuildText) return;
-        if (!channel.guild?.members.me?.permissionsIn(channel as TextChannel).has(PermissionFlagsBits.SendMessages)) return;
+        // Queue-end notice goes to text channels and voice-channel text chats
+        const canSend = channel
+            && (channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildVoice)
+            && channel.guild?.members.me?.permissionsIn(channel as TextChannel).has(PermissionFlagsBits.SendMessages);
 
         const leaveEmbed = new EmbedBuilder()
             .setColor(client.color)
@@ -41,27 +50,17 @@ export default new ShoukakuEvent({
                 .setStyle(ButtonStyle.Link),
         );
 
-        const cdata = await getMusicChannelSetup(player.guildId);
-
-        if (!cdata) {
+        // The setup panel already renders the queue-ended state via
+        // musicSetupUpdate below - skip the chat message only when playback
+        // happened in the setup channel itself, not whenever a setup exists.
+        if (canSend && (!cdata || cdata.Channel !== player.textId)) {
             await channel.send({
                 embeds: [leaveEmbed],
                 components: [settings]
             }).catch(() => { });
         }
 
-        // Disconnect from voice channel and destroy the player
-        //console.log(`[PLAYER_EMPTY] Disconnecting from voice channel in guild ${player.guildId}`);
-        if (player.state == 1) player.disconnect();
-        if (player.state !== PlayerState.DESTROYING && player.state !== PlayerState.DESTROYED) await player.destroy()
-
-        const setupUpdateEmbed = new EmbedBuilder()
-            .setColor(client.color)
-            .setTitle(`No song playing currently`)
-            .setImage(getBackgroundAttachmentUrl())
-            .setDescription(
-                `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
-            );
+        const setupUpdateEmbed = idlePanelEmbed(client);
 
         await musicSetupUpdate(client, player, setupUpdateEmbed);
     }

@@ -13,14 +13,33 @@ const setupCache = new Map<string, MusicChannelDocument | null>();
 export async function getMusicChannelSetup(guildId: string): Promise<MusicChannelDocument | null> {
     if (setupCache.has(guildId)) return setupCache.get(guildId)!;
 
-    const doc = await setupDB.findOne<MusicChannelDocument>({ Guild: guildId }).catch(() => null);
-    setupCache.set(guildId, doc);
-    return doc;
+    try {
+        const doc = await setupDB.findOne<MusicChannelDocument>({ Guild: guildId });
+        setupCache.set(guildId, doc);
+        return doc;
+    } catch {
+        // DB failure: report no setup for this call, but don't cache the miss -
+        // the next caller should retry rather than be locked out until /setup runs.
+        return null;
+    }
 }
 
 /** Called by setup.ts after creating/deleting a setup doc. */
 export function invalidateMusicChannelSetup(guildId: string): void {
     setupCache.delete(guildId);
+}
+
+// Single source for the "nothing playing" setup panel. Previously copy-pasted
+// across voicestateupdate / playerClosed / playerEmpty / musicButton / stop /
+// setup - reads process.env directly so no imageUtils wrapper is needed.
+export function idlePanelEmbed(client: CustomClient): EmbedBuilder {
+    return new EmbedBuilder()
+        .setColor(client.color)
+        .setTitle(`No song playing currently`)
+        .setImage(process.env.BACKGROUND_URL || null)
+        .setDescription(
+            `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
+        );
 }
 
 export async function musicSetupUpdate(client: CustomClient, player: KazagumoPlayer, embed: EmbedBuilder): Promise<void> {

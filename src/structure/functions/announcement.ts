@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto"
 import { EmbedBuilder, Guild, ChannelType, PermissionsBitField, TextChannel, NewsChannel } from "discord.js"
 import { CustomClient } from "../classes/index.js"
-import setupDB from "../../schemas/musicchannel.js"
+import setupDB, { MusicChannelDocument } from "../../schemas/musicchannel.js"
 
 export interface AnnouncementPayload {
     title: string
@@ -13,6 +14,18 @@ export interface AnnouncementPayload {
 
 // In-memory previews awaiting confirmation in the logs channel (lost on restart)
 export const announcePreviews = new Map<string, AnnouncementPayload>()
+
+const PREVIEW_TTL_MS = 15 * 60 * 1000
+
+// Register a preview with an expiry - an unconfirmed preview is dropped after
+// 15 minutes so the map can't grow unbounded; confirming afterwards reports
+// the standard "preview expired" status.
+export function stageAnnouncePreview(payload: AnnouncementPayload): string {
+    const id = randomUUID()
+    announcePreviews.set(id, payload)
+    setTimeout(() => announcePreviews.delete(id), PREVIEW_TTL_MS).unref()
+    return id
+}
 
 export function buildAnnouncementEmbed(client: CustomClient, payload: AnnouncementPayload): EmbedBuilder {
 
@@ -80,8 +93,15 @@ async function findAnnounceChannel(guild: Guild): Promise<TextChannel | NewsChan
 
     if (sendable.size === 0) return null
 
-    // Prefer the setup channel, then the system channel, then the first channel by position
-    const setup = await setupDB.findOne({ Guild: guild.id }).catch(() => null)
+    // Prefer the setup channel, then the system channel, then the first channel by position.
+    // A DB error is not the same as "no setup record" - fail the guild rather
+    // than silently guessing a fallback channel.
+    let setup: MusicChannelDocument | null
+    try {
+        setup = await setupDB.findOne<MusicChannelDocument>({ Guild: guild.id })
+    } catch {
+        return null
+    }
     if (setup && sendable.has(setup.Channel)) return sendable.get(setup.Channel) as TextChannel | NewsChannel
 
     if (guild.systemChannelId && sendable.has(guild.systemChannelId)) return sendable.get(guild.systemChannelId) as TextChannel | NewsChannel

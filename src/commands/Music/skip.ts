@@ -18,6 +18,6 @@ export default new SlashCommand({
         await interaction.deferReply()
         player.skip()
 
-        return editReply(interaction, "⏭", "**Skipped** the current track")
+        return editReply(interaction, "⏭", "Skipped the current track")
     }
 })

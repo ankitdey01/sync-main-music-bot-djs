@@ -1,10 +1,9 @@
-import { BaseGuildTextChannel, ButtonInteraction, EmbedBuilder, Events } from "discord.js"
+import { BaseGuildTextChannel, ButtonInteraction, Events } from "discord.js"
 import { Event, CustomClient, memberVoice, botVC, differentVoice, editReply, reply } from "../../structure/index.js"
 import wait from "node:timers/promises"
 import buttonDB, { TempButtonSchema } from "../../schemas/tempbutton.js"
-import { musicSetupUpdate } from "../../structure/index.js"
+import { musicSetupUpdate, idlePanelEmbed } from "../../structure/index.js"
 import { clearChannelButtons } from "../../systems/button.js"
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js"
 
 export default new Event({
     name: Events.InteractionCreate,
@@ -103,13 +102,7 @@ export default new Event({
                 player.destroy()
                 await clearChannelButtons(client, interaction.guild?.id as string, player.textId as string)
 
-                const setupUpdateEmbed = new EmbedBuilder()
-                    .setColor(client.color)
-                    .setTitle(`No song playing currently`)
-                    .setImage(getBackgroundAttachmentUrl())
-                    .setDescription(
-                        `**[Invite Me](${client.data.links.invite})  :  [Support Server](${client.data.links.support})  :  [Vote Me](${client.data.topgg.vote})**`
-                    )
+                const setupUpdateEmbed = idlePanelEmbed(client)
 
                 await musicSetupUpdate(client, player, setupUpdateEmbed)
             }

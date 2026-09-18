@@ -21,6 +21,16 @@ export interface MusicChannelDocument extends MusicChannelSchema, Document {
 
 }
 
+// Dedicated sub-schema so LastPlayed stays optional overall while its own
+// Title/Author/Identifier stay required when a snapshot exists. _id disabled:
+// the snapshot is a plain embedded object, not its own document.
+const lastPlayedSchema = new mongoose.Schema({
+    Title: { type: String, required: true },
+    Author: { type: String, required: true },
+    Identifier: { type: String, required: true },
+    Thumbnail: { type: String }
+}, { _id: false })
+
 export default mongoose.model<MusicChannelDocument>("musicChannel", new mongoose.Schema({
 
     Guild: { type: String, required: true},
@@ -28,11 +38,6 @@ export default mongoose.model<MusicChannelDocument>("musicChannel", new mongoose
     VoiceChannel: { type: String, required: true},
     Message: { type: String, required: true},
 
-    LastPlayed: {
-        Title: { type: String, required: true },
-        Author: { type: String, required: true },
-        Identifier: { type: String, required: true },
-        Thumbnail: { type: String }
-    }
+    LastPlayed: { type: lastPlayedSchema, required: false }
 
 }))

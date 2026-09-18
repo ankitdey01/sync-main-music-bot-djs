@@ -29,7 +29,7 @@ export default new SlashCommand({
 
         log(client,
             Embed,
-            client.data.devBotEnabled ? client.data.dev.log.error : client.data.prod.log.error
+            client.data.devBotEnabled ? client.data.dev.webhook.error : client.data.prod.webhook.error
         )
     }
 })

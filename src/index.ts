@@ -5,7 +5,7 @@ import { Partials, GatewayIntentBits } from "discord.js";
 const client = new CustomClient({
     data: {
         ...config,
-        devBotEnabled: false
+        devBotEnabled: process.env.NODE_ENV === "dev" ? true : false
     },
     intents: [
         GatewayIntentBits.Guilds,

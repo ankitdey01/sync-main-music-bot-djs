@@ -1,6 +1,5 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { SlashCommand, memberVoice, botVC, differentVoice, msToTimestamp, reply } from "../../structure/index.js";
-import { getBackgroundAttachmentUrl } from "../../utils/imageUtils.js";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -32,7 +31,7 @@ export default new SlashCommand({
                 { name: 'Song by', value: `\`${track.author}\``, inline: true },
                 { name: 'Duration', value: `\`❯ ${msToTimestamp(track.length as number)}\``, inline: true },
             )
-            .setImage(track.thumbnail || getBackgroundAttachmentUrl())
+            .setImage(track.thumbnail || process.env.BACKGROUND_URL || null)
 
         try {
             await interaction.user.send({ embeds: [Embed] })

@@ -1,7 +1,7 @@
 import { CustomClient, Event } from "../../structure/index.js";
 import { AutocompleteInteraction, Events } from "discord.js";
 import PlaylistDB, { PlaylistSchema } from "../../schemas/playlist.js";
-import { getTrendingSongs } from "../../utils/youtubeTrending.js";
+import { getTrendingSongs, getFallbackTrendingChoices } from "../../utils/youtubeTrending.js";
 
 // Autocomplete results are cached globally by query (YouTube results do not
 // differ per user, so one user's search serves everyone) for 5 minutes.
@@ -31,6 +31,59 @@ function isFresh(interaction: AutocompleteInteraction): boolean {
     return Date.now() - interaction.createdTimestamp <= MAX_INTERACTION_AGE_MS;
 }
 
+// Lavalink/Kazagumo has no single documented "paid" flag - different
+// Lavalink builds/forks expose it under different keys (top-level,
+// info, or pluginInfo). Filter a track when ANY known paid marker is
+// truthy, plus conservative YouTube movie/rental URL shapes. Missing
+// properties simply don't match, so normal tracks are never removed.
+const PAID_FLAG_KEYS = [
+    "isPaid",
+    "isPremium",
+    "requiresPayment",
+    "purchaseRequired",
+    "paidContent",
+    "isPaidContent",
+    "isPurchased",
+    "requiresPurchase",
+    "isMovie",
+    "isRent",
+    "membershipOnly",
+    "premium",
+    "paid",
+];
+
+function isPaidTrack(track: unknown): boolean {
+    const t = track as any;
+    const raw = (() => { try { return t?.getRaw?.(); } catch { return undefined; } }) as any;
+    const candidates: unknown[] = [
+        t,
+        t?.info,
+        t?.pluginInfo,
+        raw?.info,
+        raw?._raw?.info,
+        raw?._raw?.pluginInfo,
+    ];
+    for (const c of candidates) {
+        if (!c || typeof c !== "object") continue;
+        const obj = c as Record<string, any>;
+        for (const key of PAID_FLAG_KEYS) {
+            const v = obj[key];
+            if (v === true || v === "true" || v === 1 || v === "1") return true;
+        }
+        // One level deep: e.g. pluginInfo: { youtube: { isPaid: true } }
+        for (const v of Object.values(obj)) {
+            if (!v || typeof v !== "object" || Array.isArray(v)) continue;
+            for (const key of PAID_FLAG_KEYS) {
+                const nested = (v as Record<string, any>)[key];
+                if (nested === true || nested === "true" || nested === 1 || nested === "1") return true;
+            }
+        }
+    }
+    const uri: unknown = t?.uri ?? raw?.info?.uri ?? raw?._raw?.info?.uri;
+    if (typeof uri === "string" && /youtube\.com\/(movie|rent|premium)|music\.youtube\.com\/.*[?&]paid=/i.test(uri)) return true;
+    return false;
+}
+
 export default new Event({
     name: Events.InteractionCreate,
 
@@ -53,8 +106,9 @@ export default new Event({
                     return
                 }
 
-                latestQueryByUser.set(userId, query)
-                const isLatest = () => latestQueryByUser.get(userId) === query
+                latestQueryByUser.set(userId, interaction.id)
+                const token = interaction.id
+                const isLatest = () => latestQueryByUser.get(userId) === token
 
                 // Cache hit: respond immediately (a newer keystroke still wins)
                 const cacheKey = trimmed.toLowerCase()
@@ -62,7 +116,7 @@ export default new Event({
                 if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL) {
                     if (isLatest() && isFresh(interaction)) {
                         await interaction.respond(cached.choices).catch(() => { })
-                        latestQueryByUser.delete(userId)
+                        if (isLatest()) latestQueryByUser.delete(userId)
                     }
                     return
                 }
@@ -84,7 +138,7 @@ export default new Event({
 
                         const result = await client.kazagumo.search(query, { requester: interaction.user })
 
-                        const choices = result.tracks.slice(0, 4).map(t => ({
+                        const choices = result.tracks.filter(t => !isPaidTrack(t)).slice(0, 4).map(t => ({
                             name: t.title.slice(0, 100) || "Unknown",
                             value: t.uri || `https://www.youtube.com/watch?v=${t.identifier}`
                         }))
@@ -92,14 +146,19 @@ export default new Event({
                         if (choices.length > 0) cacheSearch(cacheKey, choices)
 
                         if (!isLatest() || !isFresh(interaction)) return
+                        // The search already came up empty - don't fire another
+                        // Lavalink request for trending, reuse cached/static choices.
                         if (choices.length > 0) await interaction.respond(choices).catch(() => { })
-                        else await interaction.respond(await getTrendingSongs(client)).catch(() => { })
+                        else await interaction.respond(getFallbackTrendingChoices()).catch(() => { })
                     } catch {
-                        // Lavalink unreachable or slow - still show the user something
-                        if (isLatest() && isFresh(interaction)) await interaction.respond(await getTrendingSongs(client)).catch(() => { })
+                        // Lavalink unreachable or slow - show cached/static choices
+                        // instead of issuing another search against a dead node.
+                        if (isLatest() && isFresh(interaction)) await interaction.respond(getFallbackTrendingChoices()).catch(() => { })
                     } finally {
-                        // the race-guard entry lives only while this burst is in flight
-                        if (latestQueryByUser.get(userId) === query) latestQueryByUser.delete(userId)
+                        // the race-guard entry lives only while this burst is in flight;
+                        // re-checked by token so an older callback cannot remove a
+                        // newer interaction's state.
+                        if (latestQueryByUser.get(userId) === token) latestQueryByUser.delete(userId)
                     }
                 }, SEARCH_DEBOUNCE_MS))
             }
