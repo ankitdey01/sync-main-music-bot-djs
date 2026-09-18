@@ -93,20 +93,24 @@ export default new Event({
             }
         }
 
-        // Log command usage (only if interaction exists and is still valid)
-        if (!interaction.replied && !interaction.deferred) {
-            try {
-                const Embed = new EmbedBuilder()
-                    .setColor("#000000")
-                    .setAuthor({ name: `${interaction.guild?.name}`, iconURL: interaction.guild?.iconURL() || client.user?.displayAvatarURL() })
-                    .setDescription(`\`\`\`Used In: ${interaction.guild?.name} (${interaction.guild?.id})\
+        // Log command usage. This is a webhook send - it only needs the
+        // interaction's metadata (guild/user/command), not a pending
+        // interaction, so it must run whether or not the command already
+        // replied/deferred (every normal command does, which is why the old
+        // `!replied && !deferred` guard silently dropped ~all logs).
+        try {
+            const Embed = new EmbedBuilder()
+                .setColor("#000000")
+                .setAuthor({ name: `${interaction.guild?.name}`, iconURL: interaction.guild?.iconURL() || client.user?.displayAvatarURL() })
+                .setDescription(`\`\`\`Used In: ${interaction.guild?.name} (${interaction.guild?.id})\
             \nCommand Used: ${interaction.commandName} (${interaction.commandId})\
             \nUsed by: ${interaction.user.username} (${interaction.user.id})\`\`\``)
 
-                log(client, Embed, client.data.devBotEnabled ? client.data.dev.webhook.command : client.data.prod.webhook.command);
-            } catch (logError) {
+            void log(client, Embed, client.data.devBotEnabled ? client.data.dev.webhook.command : client.data.prod.webhook.command).catch((logError) => {
                 console.error('Failed to log command usage:', logError);
-            }
+            });
+        } catch (logError) {
+            console.error('Failed to log command usage:', logError);
         }
     }
 });

@@ -1,6 +1,6 @@
 import { ButtonInteraction, EmbedBuilder, Events, TextInputBuilder, TextInputStyle, ModalBuilder, LabelBuilder, ColorResolvable, MessageFlags } from "discord.js"
 import { KazagumoPlayer } from "kazagumo"
-import { CustomClient, Event, paginate, reply, editReply, announcePreviews, broadcastAnnouncement, formatAnnounceList, msToTimestamp } from "../../structure/index.js"
+import { CustomClient, Event, paginate, reply, editReply, announcePreviews, announceSending, broadcastAnnouncement, formatAnnounceList, msToTimestamp } from "../../structure/index.js"
 
 export default new Event({
     name: Events.InteractionCreate,
@@ -157,11 +157,23 @@ async function handleAnnounceDecision(interaction: ButtonInteraction, client: Cu
     const previewId = interaction.customId.replace("owner-announce-confirm-", "").replace("owner-announce-reject-", "")
     const payload = announcePreviews.get(previewId)
 
+    const baseEmbed = interaction.message?.embeds?.[0]
     const setStatus = (status: string, color: ColorResolvable) =>
-        EmbedBuilder.from(interaction.message.embeds[0])
+        (baseEmbed ? EmbedBuilder.from(baseEmbed) : new EmbedBuilder())
             .setColor(color)
-            .spliceFields(0, interaction.message.embeds[0].fields.length)
+            .spliceFields(0, baseEmbed?.fields.length ?? 0)
             .addFields({ name: "Status", value: status })
+
+    // In-flight guard FIRST, before either branch: while a broadcast for this
+    // preview is active, both Confirm and Reject must preserve that status.
+    // Otherwise Reject would falsely report "nothing was sent" and overwrite
+    // the confirm flow's Broadcasting status.
+    if (announceSending.has(previewId)) {
+        return interaction.update({
+            embeds: [setStatus("📤 Already broadcasting this announcement, please wait...", client.color)],
+            components: []
+        }).catch(() => { })
+    }
 
     if (interaction.customId.startsWith("owner-announce-reject-")) {
 
@@ -170,27 +182,45 @@ async function handleAnnounceDecision(interaction: ButtonInteraction, client: Cu
         return interaction.update({
             embeds: [setStatus("❌ Announcement rejected. Nothing was sent.", "Red")],
             components: []
-        })
+        }).catch(() => { })
     }
 
     if (!payload) {
         return interaction.update({
             embeds: [setStatus("⚠ This preview expired (bot restarted). Create the announcement again.", "Grey")],
             components: []
-        })
+        }).catch(() => { })
     }
 
-    // Consume the preview immediately so a double click can't double-send
+    // Reserve the preview BEFORE awaiting acknowledgement so concurrent
+    // confirm handlers can't both pass the guard above and double-broadcast.
+    // announcePreviews stays untouched until ack succeeds.
+    announceSending.add(previewId)
+    try {
+        await interaction.deferUpdate()
+    } catch {
+        announceSending.delete(previewId)
+        return
+    }
+
+    // Consume the preview only after a successful ack so a failed ack doesn't
+    // burn it (which is what made the 2nd click say "restarted").
     announcePreviews.delete(previewId)
 
-    await interaction.deferUpdate()
-
-    await interaction.message.edit({
+    await interaction.editReply({
         embeds: [setStatus(`📤 Broadcasting to **${client.guilds.cache.size}** server(s)...`, client.color)],
         components: []
     }).catch(() => { })
 
-    const { sent, failed } = await broadcastAnnouncement(client, payload)
+    let sent: string[] = []
+    let failed: string[] = []
+    try {
+        ({ sent, failed } = await broadcastAnnouncement(client, payload))
+    } catch (error) {
+        client.logger.error("Announce", `Broadcast failed: ${error}`)
+    } finally {
+        announceSending.delete(previewId)
+    }
 
     // Keep the combined description under Discord's 4096-char embed limit so
     // the final edit can't fail and leave the stale "Broadcasting..." status;
@@ -207,7 +237,7 @@ async function handleAnnounceDecision(interaction: ButtonInteraction, client: Cu
         .setFooter({ text: `Requested by ${payload.requestedBy}` })
         .setTimestamp()
 
-    await interaction.message.edit({ embeds: [ReportEmbed], components: [] }).catch(() => { })
+    await interaction.editReply({ embeds: [ReportEmbed], components: [] }).catch(() => { })
 }
 
 function playerEmbeds(players: KazagumoPlayer[], client: CustomClient): EmbedBuilder[] {

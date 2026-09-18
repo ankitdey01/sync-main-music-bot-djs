@@ -15,6 +15,11 @@ export interface AnnouncementPayload {
 // In-memory previews awaiting confirmation in the logs channel (lost on restart)
 export const announcePreviews = new Map<string, AnnouncementPayload>()
 
+// Preview IDs currently being broadcast. Consumed previews are moved here
+// (instead of just deleted) so a second click during the broadcast reports
+// "already sending" rather than the misleading "bot restarted" expired path.
+export const announceSending = new Set<string>()
+
 const PREVIEW_TTL_MS = 15 * 60 * 1000
 
 // Register a preview with an expiry - an unconfirmed preview is dropped after
