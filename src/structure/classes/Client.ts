@@ -41,7 +41,7 @@ export class CustomClient extends Client {
         this.setMaxListeners(20);
     }
 
-    color: ColorResolvable = "#2B2D31";
+    color: ColorResolvable = "#242429";
 
     async initShoukaku() {
         // Load nodes dynamically after env is loaded

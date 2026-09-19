@@ -135,7 +135,7 @@ SPOTIFY_CLIENT_ID=YOUR_SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET=YOUR_SPOTIFY_CLIENT_SECRET
 
 # Bot Settings
-BOT_COLOR="#2B2D3110"
+BOT_COLOR="#24242910"
 DEVELOPER_IDS=YOUR_DISCORD_USER_ID
 ```
 
@@ -153,7 +153,7 @@ DEVELOPER_IDS=YOUR_DISCORD_USER_ID
 | `SUPPORT_SERVER` | Discord support server invite | ✅ Yes |
 | `TOPGG_TOKEN` | Top.gg API token | ⚠️ Optional |
 | `TOPGG_VOTE_LINK` | Top.gg vote link | ⚠️ Optional |
-| `BOT_COLOR` | Embed color (default: Black `#2B2D31`) | ⚠️ Optional |
+| `BOT_COLOR` | Embed color (default: Black `#242429`) | ⚠️ Optional |
 | `DEVELOPER_IDS` | Comma-separated Discord user IDs | ⚠️ Optional |
 
 **3. Configure Lavalink:**

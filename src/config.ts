@@ -72,7 +72,7 @@ export default {
     guilds: {
         dev: process.env.DEV_GUILD_IDS?.split(',') || []
     },
-    color: (process.env.BOT_COLOR || '#2B2D31') as ColorResolvable,
+    color: (process.env.BOT_COLOR || '#242429') as ColorResolvable,
     developers: process.env.DEVELOPER_IDS?.split(',') || [],
     maxSongsPerDay,
     playerLimits: {
