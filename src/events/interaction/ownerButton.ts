@@ -1,4 +1,4 @@
-import { ButtonInteraction, EmbedBuilder, Events, TextInputBuilder, TextInputStyle, ModalBuilder, LabelBuilder, ColorResolvable, MessageFlags } from "discord.js"
+import { ButtonInteraction, EmbedBuilder, Events, TextInputBuilder, TextInputStyle, ModalBuilder, LabelBuilder, ColorResolvable } from "discord.js"
 import { KazagumoPlayer } from "kazagumo"
 import { CustomClient, Event, paginate, reply, editReply, announcePreviews, announceSending, broadcastAnnouncement, formatAnnounceList, msToTimestamp } from "../../structure/index.js"
 
@@ -22,7 +22,7 @@ export default new Event({
 
             case "owner-servers": {
 
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+                await interaction.deferReply()
                 const servers = serverEmbed(Array.from(client.guilds.cache), 10, client)
                 await paginate(interaction, servers)
 
@@ -31,7 +31,7 @@ export default new Event({
 
             case "owner-players": {
 
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+                await interaction.deferReply()
                 const players = Array.from(client.kazagumo.players.values())
 
                 if (!players.length) {
