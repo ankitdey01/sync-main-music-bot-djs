@@ -130,7 +130,7 @@ export default new ShoukakuEvent({
         // Playing anywhere else: send the controls to the command channel...
         const msg = await channel.send({
             embeds: [new EmbedBuilder()
-                .setColor("#2B2D310")
+                .setColor("#2B2D31")
                 .setAuthor({
                     name: "NOW PLAYING",
                     iconURL: (track.requester as any)?.displayAvatarURL?.() || client.user?.displayAvatarURL(),

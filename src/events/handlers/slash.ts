@@ -100,7 +100,7 @@ export default new Event({
         // `!replied && !deferred` guard silently dropped ~all logs).
         try {
             const Embed = new EmbedBuilder()
-                .setColor("#2B2D310")
+                .setColor("#2B2D31")
                 .setAuthor({ name: `${interaction.guild?.name}`, iconURL: interaction.guild?.iconURL() || client.user?.displayAvatarURL() })
                 .setDescription(`\`\`\`Used In: ${interaction.guild?.name} (${interaction.guild?.id})\
             \nCommand Used: ${interaction.commandName} (${interaction.commandId})\
