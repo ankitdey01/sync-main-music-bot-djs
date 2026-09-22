@@ -68,7 +68,7 @@ export class Handler {
                 // Kazagumo player events
                 const playerEvents = ["playerStart", "playerEnd", "playerEmpty", "playerClosed", "playerUpdate", "playerException", "playerStuck", "playerResumed"];
                 // Shoukaku node events
-                const nodeEvents = ["ready", "error", "close", "disconnect", "debug"];
+                const nodeEvents = ["ready", "error", "close", "disconnect", "debug", "reconnecting"];
                 
                 if (playerEvents.includes(event?.name)) {
                     this.client.kazagumo.on(event?.name as any, execute);

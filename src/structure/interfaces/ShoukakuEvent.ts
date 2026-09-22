@@ -5,12 +5,13 @@ export class ShoukakuEvent {
     }
 }
 
-type ValidNodeEvents = 
+type ValidNodeEvents =
     "ready" |
     "error" |
     "close" |
     "disconnect" |
-    "debug";
+    "debug" |
+    "reconnecting";
 
 type ValidPlayerEvents =
     "playerStart" |
