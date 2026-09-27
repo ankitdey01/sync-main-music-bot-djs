@@ -42,10 +42,20 @@ function mergeVoted(values: Array<boolean | null | undefined>, fallback: boolean
 async function migrateStringDates(): Promise<void> {
     const col = dailyDB.collection;
     const legacy = await col.find({ Date: { $type: "string" } }).toArray();
+    let transactionsSupported = true;
     for (const doc of legacy) {
         const day = String((doc as any).Date);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+            await col.deleteOne({ _id: (doc as any)._id });
+            continue;
+        }
         const midnight = new Date(`${day}T00:00:00.000Z`);
-        if (Number.isNaN(midnight.getTime())) {
+        if (
+            Number.isNaN(midnight.getTime())
+            || midnight.getUTCFullYear() !== Number(day.slice(0, 4))
+            || midnight.getUTCMonth() !== Number(day.slice(5, 7)) - 1
+            || midnight.getUTCDate() !== Number(day.slice(8, 10))
+        ) {
             await col.deleteOne({ _id: (doc as any)._id });
             continue;
         }
@@ -53,12 +63,52 @@ async function migrateStringDates(): Promise<void> {
         if (existing && String((existing as any)._id) !== String((doc as any)._id)) {
             const mergedCount = (Number((existing as any).Count) || 0) + (Number((doc as any).Count) || 0);
             const mergedVoted = mergeVoted([(existing as any).Voted, (doc as any).Voted], (existing as any).Voted ?? null);
-            await col.updateOne({ _id: (existing as any)._id }, { $set: { Count: mergedCount, Voted: mergedVoted } });
-            await col.deleteOne({ _id: (doc as any)._id });
+            if (transactionsSupported) {
+                const session = await mongoose.startSession();
+                try {
+                    await session.withTransaction(async () => {
+                        await col.updateOne(
+                            { _id: (existing as any)._id },
+                            { $set: { Count: mergedCount, Voted: mergedVoted } },
+                            { session }
+                        );
+                        await col.deleteOne({ _id: (doc as any)._id }, { session });
+                    });
+                } catch (error) {
+                    if (!isTransactionUnsupported(error)) throw error;
+                    transactionsSupported = false;
+                } finally {
+                    await session.endSession();
+                }
+            }
+            if (!transactionsSupported) {
+                // The marker makes the update itself idempotent when a
+                // standalone MongoDB server cannot provide transactions.
+                const result = await col.updateOne(
+                    { _id: (existing as any)._id, MigratedLegacyIds: { $ne: (doc as any)._id } },
+                    {
+                        $inc: { Count: Number((doc as any).Count) || 0 },
+                        $set: { Voted: mergedVoted },
+                        $addToSet: { MigratedLegacyIds: (doc as any)._id }
+                    }
+                );
+                if (result.matchedCount === 0) {
+                    await col.deleteOne({ _id: (doc as any)._id });
+                    continue;
+                }
+                await col.deleteOne({ _id: (doc as any)._id });
+            }
         } else {
             await col.updateOne({ _id: (doc as any)._id }, { $set: { Date: midnight } });
         }
     }
+}
+
+function isTransactionUnsupported(error: unknown): boolean {
+    const mongoError = error as { code?: number; message?: string };
+    return mongoError.code === 20
+        || mongoError.code === 251
+        || /transaction numbers are only allowed|transactions are not supported/i.test(mongoError.message ?? "");
 }
 
 // Collapse duplicate User+Date records (summing Count, merging Voted), then
