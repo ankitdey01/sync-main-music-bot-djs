@@ -12,7 +12,7 @@ type ValidInteraction = ChatInputCommandInteraction |
 // Single writer for the Voted flag - the same { User, Date } filter + $set
 // shape was copy-pasted 4x. DB failures are swallowed so a Mongo hiccup never
 // masquerades as a Top.gg verdict; the in-memory doc still drives this request.
-async function setVoted(userId: string, date: string, voted: boolean | null): Promise<void> {
+async function setVoted(userId: string, date: Date, voted: boolean | null): Promise<void> {
     await dailyDB.updateOne(
         { User: userId, Date: date },
         { $set: { Voted: voted } }

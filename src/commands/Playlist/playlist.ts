@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, GuildMember, MessageFlags } from "discord.js"
 import DB from "../../schemas/playlist.js"
 import wait from "node:timers/promises"
-import { playSong, paginate as Pagination, memberVoice, joinable, SlashCommand, stageCheck, differentVoice } from "../../structure/index.js"
+import { playSong, getDailyPlaysDoc, paginate as Pagination, memberVoice, joinable, SlashCommand, stageCheck, differentVoice } from "../../structure/index.js"
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -345,6 +345,23 @@ export default new SlashCommand({
                         })
 
                         for (const song of list.songs) {
+
+                            // Batch gate for the skipped per-song check below: an
+                            // already-capped user must stop queuing here. Without
+                            // this, every song after the cap creates a fresh player
+                            // (getPlayer finds nothing - playerStart destroyed the
+                            // last one) just to be destroyed again at track start:
+                            // one join + limit message + disconnect per song until
+                            // the list is exhausted. Stored-doc read only (no
+                            // Top.gg HTTP); playerStart still enforces the exact
+                            // cutoff at track start for caps hit mid-batch.
+                            const dailyDoc = await getDailyPlaysDoc(interaction.user.id);
+                            if (dailyDoc.Voted === false && dailyDoc.Count >= client.data.maxSongsPerDay) {
+                                await interaction.editReply({
+                                    embeds: [errEmbed.setDescription(`\`❌\` | You've used ${dailyDoc.Count}/${client.data.maxSongsPerDay} free plays today. Vote me on [top.gg](${client.data.topgg.vote}) to keep playing!`)]
+                                });
+                                return;
+                            }
 
                             // Skip the per-song Top.gg verification - it would fire
                             // one HTTP call per track; playerStart still enforces

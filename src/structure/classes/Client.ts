@@ -172,7 +172,9 @@ export class CustomClient extends Client {
         try {
             const data = await mongoose.connect(this.data.devBotEnabled ? this.data.dev.db : this.data.prod.db);
             this.logger.info("Database", "Connected to : " + this.logger.highlight(data.connection.name, "success"));
-            // Dedupe + build the unique User+Date index for daily plays
+            // Migrate legacy string dates, dedupe, and build the unique
+            // User+Date index plus the TTL index (auto-deletes docs 2 days
+            // after their Date - keeps today + yesterday, no timer needed).
             await ensureDailyPlaysIndex();
         } catch {
             this.logger.error("Database", "Error Connecting to Database or preparing indexes - stopping startup!");
